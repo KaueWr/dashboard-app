@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Papa from 'papaparse';
 import {
   BarChart, Bar, PieChart, Pie, XAxis, YAxis,
@@ -31,20 +31,13 @@ function App() {
     try {
       if (!dataString) return 0;
       
-      // Tenta vários formatos de data
       let data;
-      
-      // Formato DD/MM/YYYY
       if (dataString.includes('/')) {
         const [dia, mes, ano] = dataString.split('/');
         data = new Date(ano, mes - 1, dia);
-      }
-      // Formato YYYY-MM-DD
-      else if (dataString.includes('-')) {
+      } else if (dataString.includes('-')) {
         data = new Date(dataString);
-      }
-      // Outro formato
-      else {
+      } else {
         data = new Date(dataString);
       }
       
@@ -69,20 +62,15 @@ function App() {
       if (!dataInicial || !dataFinal) return 0;
       
       let data1, data2;
-      
-      // Formato DD/MM/YYYY
       if (dataInicial.includes('/')) {
         const [dia, mes, ano] = dataInicial.split('/');
         data1 = new Date(ano, mes - 1, dia);
         const [dia2, mes2, ano2] = dataFinal.split('/');
         data2 = new Date(ano2, mes2 - 1, dia2);
-      }
-      // Formato YYYY-MM-DD
-      else if (dataInicial.includes('-')) {
+      } else if (dataInicial.includes('-')) {
         data1 = new Date(dataInicial);
         data2 = new Date(dataFinal);
-      }
-      else {
+      } else {
         data1 = new Date(dataInicial);
         data2 = new Date(dataFinal);
       }
@@ -101,8 +89,8 @@ function App() {
     }
   };
 
-  // Função para sincronizar dados
-  const syncData = async () => {
+  // Função para sincronizar dados - Envolvida em useCallback para evitar avisos de dependência
+  const syncData = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -136,13 +124,12 @@ function App() {
 
             for (let i = 2; i < rows.length; i++) {
               const row = rows[i];
-
               if (!row || row.length < 7) continue;
 
               const itemName = String(row[0] || '').trim();
               const situacao = String(row[6] || '').trim();
-              const dataInicial = String(row[4] || '').trim(); // Coluna E
-              const dataFinal = String(row[5] || '').trim();   // Coluna F
+              const dataInicial = String(row[4] || '').trim();
+              const dataFinal = String(row[5] || '').trim();
 
               if (!itemName || !situacao) continue;
 
@@ -155,16 +142,15 @@ function App() {
 
               counts[situacao] = (counts[situacao] || 0) + 1;
 
-              // Calcular lead time por mês
               if (dataInicial && dataFinal) {
                 const leadTime = calcularLeadTime(dataInicial, dataFinal);
                 try {
                   let mes = '';
                   if (dataFinal.includes('/')) {
-                    const [dia, mesNum, ano] = dataFinal.split('/');
+                    const [_, mesNum, ano] = dataFinal.split('/'); // Corrigido: dia para _
                     mes = `${mesNum}/${ano}`;
                   } else if (dataFinal.includes('-')) {
-                    const [ano, mesNum, dia] = dataFinal.split('-');
+                    const [ano, mesNum, _] = dataFinal.split('-'); // Corrigido: dia para _
                     mes = `${mesNum}/${ano}`;
                   }
                   
@@ -175,12 +161,9 @@ function App() {
                     leadTimesByMonth[mes].total += leadTime;
                     leadTimesByMonth[mes].count += 1;
                   }
-                } catch (e) {
-                  // Ignorar erros de parsing
-                }
+                } catch (e) {}
               }
 
-              // Calcular dias para AG. RETORNO
               if (situacao === 'AG. RETORNO' && dataFinal) {
                 const dias = calcularDiasPassados(dataFinal);
                 diasAgRetorno += dias;
@@ -198,7 +181,6 @@ function App() {
               fill: COLORS[name] || '#6b7280'
             }));
 
-            // Preparar dados de lead time por mês
             const leadTimeChartData = Object.entries(leadTimesByMonth)
               .map(([mes, dados]) => ({
                 mes,
@@ -226,11 +208,9 @@ function App() {
             const now = new Date();
             const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
             setLastSync(timeStr);
-
             setLoading(false);
           } catch (err) {
-            const errorMsg = err instanceof Error ? err.message : 'Erro desconhecido';
-            setError(`Erro ao processar: ${errorMsg}`);
+            setError(`Erro ao processar: ${err.message}`);
             setLoading(false);
           }
         },
@@ -240,25 +220,24 @@ function App() {
         },
       });
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Erro desconhecido';
-      setError(errorMsg);
+      setError(err.message);
       setLoading(false);
     }
-  };
+  }, []); // Dependências vazias para useCallback
 
   // Sincronizar ao carregar
   useEffect(() => {
     syncData();
-  }, []);
+  }, [syncData]); // Adicionado syncData como dependência
 
   // Atualizar automaticamente a cada 30 minutos
   useEffect(() => {
     const interval = setInterval(() => {
       syncData();
-    }, 30 * 60 * 1000); // 30 minutos
+    }, 30 * 60 * 1000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [syncData]); // Adicionado syncData como dependência
 
   // Filtrar itens
   const filteredItems = data?.items.filter(item => {
@@ -267,580 +246,149 @@ function App() {
     return matchName && matchStatus;
   }) || [];
 
+  const styles = {
+    container: { fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif', backgroundColor: '#f3f4f6', minHeight: '100vh' },
+    header: { backgroundColor: '#1f2937', color: 'white', padding: '1rem 2rem', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
+    headerContent: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '1200px', margin: '0 auto' },
+    logo: { display: 'flex', alignItems: 'center', gap: '0.5rem' },
+    logoIcon: { fontSize: '1.5rem' },
+    logoText: { fontSize: '1.25rem', fontWeight: 'bold' },
+    headerRight: { display: 'flex', alignItems: 'center', gap: '1rem' },
+    button: { padding: '0.5rem 1rem', borderRadius: '0.375rem', border: 'none', cursor: 'pointer', fontWeight: '600', transition: 'all 0.2s' },
+    buttonSync: { backgroundColor: '#3b82f6', color: 'white' },
+    lastSyncText: { fontSize: '0.875rem', color: '#9ca3af' },
+    tabsContainer: { display: 'flex', gap: '1rem', maxWidth: '1200px', margin: '1rem auto 0' },
+    tab: { padding: '0.5rem 1rem', backgroundColor: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer', borderBottom: '2px solid transparent' },
+    tabActive: { color: '#3b82f6', borderBottom: '2px solid #3b82f6' },
+    main: { maxWidth: '1200px', margin: '2rem auto', padding: '0 1rem' },
+    messageError: { backgroundColor: '#fee2e2', color: '#b91c1c', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' },
+    card: { backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '1.5rem' },
+    grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' },
+    statCard: { backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', textAlign: 'center' },
+    statValue: { fontSize: '2rem', fontWeight: 'bold', color: '#1f2937' },
+    statLabel: { color: '#6b7280', fontSize: '0.875rem', marginTop: '0.25rem' },
+    chartGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem' },
+    table: { width: '100%', borderCollapse: 'collapse' },
+    th: { textAlign: 'left', padding: '0.75rem', borderBottom: '2px solid #e5e7eb', color: '#374151' },
+    td: { padding: '0.75rem', borderBottom: '1px solid #e5e7eb' },
+    badge: { padding: '0.25rem 0.5rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '600' },
+    filterContainer: { display: 'flex', gap: '1rem', marginBottom: '1rem' },
+    input: { padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid #d1d5db', flex: 1 }
+  };
+
+  if (loading && !data) return <div style={{...styles.container, display: 'flex', justifyContent: 'center', alignItems: 'center'}}><h2>Carregando Dashboard...</h2></div>;
+
   return (
     <div style={styles.container}>
-      {/* HEADER */}
       <header style={styles.header}>
         <div style={styles.headerContent}>
           <div style={styles.logo}>
             <span style={styles.logoIcon}>📊</span>
-            <span style={styles.logoText}>Dashboard</span>
+            <span style={styles.logoText}>Dashboard de Desenvolvimento</span>
           </div>
           <div style={styles.headerRight}>
-            <button
-              onClick={syncData}
-              disabled={loading}
-              style={{...styles.button, ...styles.buttonSync}}
-            >
+            <button onClick={syncData} disabled={loading} style={{...styles.button, ...styles.buttonSync}}>
               {loading ? '⏳ Sincronizando...' : '🔄 Atualizar'}
             </button>
-            {lastSync && (
-              <span style={styles.lastSyncText}>Atualizado: {lastSync}</span>
-            )}
+            {lastSync && <span style={styles.lastSyncText}>Atualizado: {lastSync}</span>}
           </div>
         </div>
-
-        {/* ABAS DE NAVEGAÇÃO */}
         <div style={styles.tabsContainer}>
-          <button
-            onClick={() => setActiveTab('dashboard')}
-            style={{
-              ...styles.tab,
-              ...(activeTab === 'dashboard' ? styles.tabActive : {})
-            }}
-          >
-            Painel
-          </button>
-          <button
-            onClick={() => setActiveTab('tabela')}
-            style={{
-              ...styles.tab,
-              ...(activeTab === 'tabela' ? styles.tabActive : {})
-            }}
-          >
-            Lista de Itens
-          </button>
+          <button onClick={() => setActiveTab('dashboard')} style={{...styles.tab, ...(activeTab === 'dashboard' ? styles.tabActive : {})}}>Painel</button>
+          <button onClick={() => setActiveTab('tabela')} style={{...styles.tab, ...(activeTab === 'tabela' ? styles.tabActive : {})}}>Lista de Itens</button>
         </div>
       </header>
 
-      {/* MAIN CONTENT */}
       <main style={styles.main}>
-        {error && (
-          <div style={styles.messageError}>
-            <p style={styles.messageTitle}>❌ Erro ao carregar dados</p>
-            <p style={styles.messageText}>{error}</p>
-          </div>
-        )}
+        {error && <div style={styles.messageError}>{error}</div>}
 
-        {loading && !data && (
-          <div style={styles.loadingContainer}>
-            <div style={styles.spinner}></div>
-            <p style={styles.loadingText}>Carregando dados...</p>
-          </div>
-        )}
-
-        {data && activeTab === 'dashboard' && (
-          <div style={styles.content}>
-            {/* KPI CARDS */}
-            <section style={styles.kpiSection}>
-              <div style={styles.kpiGrid}>
-                <div style={styles.kpiCard}>
-                  <div style={styles.kpiLabel}>Total de Itens</div>
-                  <div style={styles.kpiValue}>{data.totalItems}</div>
-                </div>
-
-                {Object.entries(data.counts).map(([situacao, count]) => (
-                  <div key={situacao} style={styles.kpiCard}>
-                    <div style={styles.kpiLabel}>{situacao}</div>
-                    <div style={{...styles.kpiValue, color: COLORS[situacao]}}>
-                      {count}
-                    </div>
-                    <div style={{...styles.kpiPercentage, color: COLORS[situacao]}}>
-                      {((count / data.totalItems) * 100).toFixed(1)}%
-                    </div>
-                  </div>
-                ))}
-
-                {data.countAgRetorno > 0 && (
-                  <div style={styles.kpiCard}>
-                    <div style={styles.kpiLabel}>Dias Ag. Retorno (Média)</div>
-                    <div style={{...styles.kpiValue, color: '#f97316'}}>
-                      {data.mediaAgRetorno}
-                    </div>
-                  </div>
-                )}
+        {activeTab === 'dashboard' ? (
+          <>
+            <div style={styles.grid}>
+              <div style={styles.statCard}>
+                <div style={styles.statValue}>{data?.totalItems || 0}</div>
+                <div style={styles.statLabel}>Total de Itens</div>
               </div>
-            </section>
+              <div style={styles.statCard}>
+                <div style={styles.statValue}>{data?.countAgRetorno || 0}</div>
+                <div style={styles.statLabel}>Aguardando Retorno</div>
+              </div>
+              <div style={styles.statCard}>
+                <div style={styles.statValue}>{data?.mediaAgRetorno || 0} dias</div>
+                <div style={styles.statLabel}>Média de Espera (AG. RETORNO)</div>
+              </div>
+            </div>
 
-            {/* GRÁFICOS */}
-            <section style={styles.chartsSection}>
-              <div style={styles.chartsGrid}>
-                <div style={styles.chartCard}>
-                  <h3 style={styles.chartTitle}>Distribuição por Situação</h3>
-                  <ResponsiveContainer width="100%" height={300}>
+            <div style={styles.chartGrid}>
+              <div style={styles.card}>
+                <h3>Situação Geral</h3>
+                <div style={{ height: 300 }}>
+                  <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie
-                        data={data.chartData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, value }) => `${name}: ${value}`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {data.chartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
+                      <Pie data={data?.chartData} cx="50%" cy="50%" outerRadius={80} fill="#8884d8" dataKey="value" label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                        {data?.chartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
                       </Pie>
                       <Tooltip />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-
-                <div style={styles.chartCard}>
-                  <h3 style={styles.chartTitle}>Contagem por Situação</h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={data.chartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="value" fill="#8884d8" radius={[8, 8, 0, 0]}>
-                        {data.chartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
               </div>
-            </section>
-            {/* GRÁFICO DE LEAD TIME POR MÊS */}
-            {data.leadTimeChartData && data.leadTimeChartData.length > 0 && (
-              <section style={styles.chartsSection}>
-                <div style={styles.chartCard}>
-                  <h3 style={styles.chartTitle}>Lead Time Médio por Mês (dias)</h3>
-                  <ResponsiveContainer width="100%" height={400}>
-                    <BarChart data={data.leadTimeChartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <div style={styles.card}>
+                <h3>Lead Time Médio por Mês (Dias)</h3>
+                <div style={{ height: 300 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={data?.leadTimeChartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="mes" />
                       <YAxis />
                       <Tooltip />
-                      <Bar dataKey="leadTime" fill="#0ea5e9" radius={[8, 8, 0, 0]} label={{ position: 'top', fill: '#1e3a5f', fontWeight: 'bold', fontSize: 12 }} />
+                      <Bar dataKey="leadTime" fill="#3b82f6" />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-              </section>
-            )}
-          </div>
-        )}
-
-        {data && activeTab === 'tabela' && (
-          <div style={styles.content}>
-            {/* FILTROS */}
-            <section style={styles.filterSection}>
-              <div style={styles.filterGrid}>
-                <div style={styles.filterGroup}>
-                  <label style={styles.filterLabel}>Filtrar por Nome:</label>
-                  <input
-                    type="text"
-                    placeholder="Digite o nome do item..."
-                    value={filterName}
-                    onChange={(e) => setFilterName(e.target.value)}
-                    style={styles.filterInput}
-                  />
-                </div>
-
-                <div style={styles.filterGroup}>
-                  <label style={styles.filterLabel}>Filtrar por Status:</label>
-                  <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
-                    style={styles.filterSelect}
-                  >
-                    <option value="">Todos os Status</option>
-                    {Object.keys(COLORS).map((status) => (
-                      <option key={status} value={status}>
-                        {status}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div style={styles.filterGroup}>
-                  <div style={styles.filterLabel}>Resultados: {filteredItems.length}</div>
-                </div>
               </div>
-            </section>
-
-            {/* TABELA */}
-            <section style={styles.tableSection}>
-              <h3 style={styles.tableTitle}>Lista de Itens</h3>
-              <div style={styles.tableWrapper}>
-                <table style={styles.table}>
-                  <thead>
-                    <tr style={styles.tableHeaderRow}>
-                      <th style={styles.tableHeader}>Item</th>
-                      <th style={styles.tableHeader}>Status</th>
-                      <th style={styles.tableHeader}>Lead Time (dias)</th>
+            </div>
+          </>
+        ) : (
+          <div style={styles.card}>
+            <div style={styles.filterContainer}>
+              <input type="text" placeholder="Filtrar por nome..." value={filterName} onChange={(e) => setFilterName(e.target.value)} style={styles.input} />
+              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={styles.input}>
+                <option value="">Todos os Status</option>
+                {Object.keys(COLORS).map(status => <option key={status} value={status}>{status}</option>)}
+              </select>
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>Item</th>
+                    <th style={styles.th}>Situação</th>
+                    <th style={styles.th}>Data Inicial</th>
+                    <th style={styles.th}>Data Final</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredItems.map((item, index) => (
+                    <tr key={index}>
+                      <td style={styles.td}>{item.item}</td>
+                      <td style={styles.td}>
+                        <span style={{...styles.badge, backgroundColor: COLORS[item.situacao] + '20', color: COLORS[item.situacao]}}>
+                          {item.situacao}
+                        </span>
+                      </td>
+                      <td style={styles.td}>{item.dataInicial}</td>
+                      <td style={styles.td}>{item.dataFinal}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {filteredItems.map((item, idx) => {
-                      const leadTime = calcularLeadTime(item.dataInicial, item.dataFinal);
-                      return (
-                        <tr key={idx} style={styles.tableRow}>
-                          <td style={styles.tableCell}>{item.item}</td>
-                          <td style={styles.tableCell}>
-                            <span
-                              style={{
-                                ...styles.badge,
-                                backgroundColor: COLORS[item.situacao]
-                              }}
-                            >
-                              {item.situacao}
-                            </span>
-                          </td>
-                          <td style={styles.tableCell}>{leadTime} dias</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </section>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </main>
     </div>
   );
 }
-
-// Media Query Helper
-const isMobile = () => typeof window !== 'undefined' && window.innerWidth < 768;
-
-const styles = {
-  container: {
-    minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    backgroundColor: '#f5f7fa',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif',
-    '@media (max-width: 768px)': {
-      fontSize: '14px'
-    }
-  },
-  header: {
-    background: '#1e3a5f',
-    color: 'white',
-    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
-  },
-  headerContent: {
-    padding: '20px 30px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    maxWidth: '1400px',
-    margin: '0 auto',
-    width: '100%',
-    flexWrap: 'wrap',
-    gap: '10px'
-  },
-  logo: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    fontSize: '1.3rem',
-    fontWeight: '700',
-    '@media (max-width: 768px)': {
-      fontSize: '1.1rem'
-    }
-  },
-  logoIcon: {
-    fontSize: '1.8rem'
-  },
-  logoText: {
-    letterSpacing: '0.5px'
-  },
-  headerRight: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '20px',
-    flexWrap: 'wrap',
-    '@media (max-width: 768px)': {
-      gap: '10px',
-      width: '100%',
-      justifyContent: 'space-between'
-    }
-  },
-  button: {
-    padding: '8px 16px',
-    border: 'none',
-    borderRadius: '4px',
-    fontSize: '0.9rem',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-    fontFamily: 'inherit',
-    '@media (max-width: 768px)': {
-      padding: '10px 14px',
-      fontSize: '0.85rem'
-    }
-  },
-  buttonSync: {
-    backgroundColor: '#0ea5e9',
-    color: 'white'
-  },
-  lastSyncText: {
-    fontSize: '0.85rem',
-    opacity: 0.8
-  },
-  tabsContainer: {
-    display: 'flex',
-    borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-    paddingLeft: '30px',
-    overflowX: 'auto',
-    '@media (max-width: 768px)': {
-      paddingLeft: '15px'
-    }
-  },
-  tab: {
-    padding: '15px 20px',
-    background: 'transparent',
-    border: 'none',
-    color: 'rgba(255, 255, 255, 0.6)',
-    cursor: 'pointer',
-    fontSize: '0.95rem',
-    fontWeight: '500',
-    borderBottom: '3px solid transparent',
-    transition: 'all 0.2s',
-    whiteSpace: 'nowrap',
-    '@media (max-width: 768px)': {
-      padding: '12px 15px',
-      fontSize: '0.85rem'
-    }
-  },
-  tabActive: {
-    color: 'white',
-    borderBottomColor: '#0ea5e9'
-  },
-  main: {
-    flex: 1,
-    padding: '30px',
-    '@media (max-width: 768px)': {
-      padding: '15px'
-    }
-  },
-  content: {
-    maxWidth: '1400px',
-    margin: '0 auto',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '30px',
-    width: '100%'
-  },
-  messageError: {
-    background: '#fee2e2',
-    border: '1px solid #fecaca',
-    borderRadius: '8px',
-    padding: '20px',
-    color: '#991b1b'
-  },
-  messageTitle: {
-    fontWeight: '600',
-    fontSize: '1.1rem',
-    margin: '0 0 10px 0'
-  },
-  messageText: {
-    margin: 0
-  },
-  loadingContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '400px',
-    gap: '20px'
-  },
-  spinner: {
-    width: '50px',
-    height: '50px',
-    border: '4px solid #e5e7eb',
-    borderTop: '4px solid #0ea5e9',
-    borderRadius: '50%',
-    animation: 'spin 1s linear infinite'
-  },
-  loadingText: {
-    fontSize: '1.1rem',
-    color: '#6b7280'
-  },
-  kpiSection: {
-    padding: '0'
-  },
-  kpiGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-    gap: '15px',
-    '@media (max-width: 768px)': {
-      gridTemplateColumns: 'repeat(2, 1fr)',
-      gap: '10px'
-    },
-    '@media (max-width: 480px)': {
-      gridTemplateColumns: '1fr',
-      gap: '10px'
-    }
-  },
-  kpiCard: {
-    background: 'white',
-    borderRadius: '8px',
-    padding: '20px',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
-    border: '1px solid #e5e7eb',
-    '@media (max-width: 480px)': {
-      padding: '15px'
-    }
-  },
-  kpiLabel: {
-    fontSize: '0.8rem',
-    color: '#6b7280',
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: '0.3px',
-    marginBottom: '10px'
-  },
-  kpiValue: {
-    fontSize: '2.2rem',
-    fontWeight: '700',
-    color: '#1e3a5f',
-    marginBottom: '8px',
-    '@media (max-width: 768px)': {
-      fontSize: '1.8rem'
-    },
-    '@media (max-width: 480px)': {
-      fontSize: '1.5rem'
-    }
-  },
-  kpiPercentage: {
-    fontSize: '0.85rem',
-    fontWeight: '600'
-  },
-  chartsSection: {
-    padding: '0'
-  },
-  chartsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
-    gap: '20px',
-    '@media (max-width: 768px)': {
-      gridTemplateColumns: '1fr',
-      gap: '15px'
-    }
-  },
-  chartCard: {
-    background: 'white',
-    borderRadius: '8px',
-    padding: '20px',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
-    border: '1px solid #e5e7eb'
-  },
-  chartTitle: {
-    marginBottom: '20px',
-    color: '#1e3a5f',
-    fontSize: '1rem',
-    margin: '0 0 20px 0',
-    fontWeight: '600'
-  },
-  filterSection: {
-    background: 'white',
-    borderRadius: '8px',
-    padding: '20px',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
-    border: '1px solid #e5e7eb'
-  },
-  filterGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: '20px',
-    '@media (max-width: 768px)': {
-      gridTemplateColumns: '1fr',
-      gap: '15px'
-    }
-  },
-  filterGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px'
-  },
-  filterLabel: {
-    fontSize: '0.9rem',
-    fontWeight: '600',
-    color: '#1e3a5f'
-  },
-  filterInput: {
-    padding: '10px 12px',
-    border: '1px solid #e5e7eb',
-    borderRadius: '6px',
-    fontSize: '0.95rem',
-    fontFamily: 'inherit',
-    '@media (max-width: 768px)': {
-      padding: '12px 14px',
-      fontSize: '1rem'
-    }
-  },
-  filterSelect: {
-    padding: '10px 12px',
-    border: '1px solid #e5e7eb',
-    borderRadius: '6px',
-    fontSize: '0.95rem',
-    fontFamily: 'inherit',
-    backgroundColor: 'white',
-    cursor: 'pointer'
-  },
-  tableSection: {
-    padding: '0'
-  },
-  tableTitle: {
-    fontSize: '1.1rem',
-    fontWeight: '600',
-    color: '#1e3a5f',
-    marginBottom: '20px',
-    margin: '0 0 20px 0'
-  },
-  tableWrapper: {
-    background: 'white',
-    borderRadius: '8px',
-    padding: '20px',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
-    border: '1px solid #e5e7eb',
-    overflowX: 'auto',
-    '@media (max-width: 768px)': {
-      padding: '15px',
-      overflowX: 'scroll'
-    }
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse'
-  },
-  tableHeaderRow: {
-    backgroundColor: '#f5f7fa'
-  },
-  tableHeader: {
-    padding: '12px',
-    textAlign: 'left',
-    fontWeight: '600',
-    color: '#1e3a5f',
-    borderBottom: '2px solid #e5e7eb',
-    fontSize: '0.9rem'
-  },
-  tableRow: {
-    borderBottom: '1px solid #e5e7eb',
-    transition: 'background-color 0.2s'
-  },
-  tableCell: {
-    padding: '12px',
-    color: '#4b5563',
-    fontSize: '0.95rem'
-  },
-  badge: {
-    display: 'inline-block',
-    padding: '6px 12px',
-    borderRadius: '4px',
-    fontSize: '0.8rem',
-    fontWeight: '600',
-    color: 'white'
-  }
-};
 
 export default App;
