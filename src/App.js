@@ -31,23 +31,23 @@ function App() {
     try {
       if (!dataString) return 0;
       
-      let data;
+      let dataObj;
       if (dataString.includes('/')) {
-        const [dia, mes, ano] = dataString.split('/');
-        data = new Date(ano, mes - 1, dia);
+        const partes = dataString.split('/');
+        dataObj = new Date(partes[2], partes[1] - 1, partes[0]);
       } else if (dataString.includes('-')) {
-        data = new Date(dataString);
+        dataObj = new Date(dataString);
       } else {
-        data = new Date(dataString);
+        dataObj = new Date(dataString);
       }
       
-      if (isNaN(data.getTime())) return 0;
+      if (isNaN(dataObj.getTime())) return 0;
       
       const hoje = new Date();
       hoje.setHours(0, 0, 0, 0);
-      data.setHours(0, 0, 0, 0);
+      dataObj.setHours(0, 0, 0, 0);
       
-      const diferenca = hoje - data;
+      const diferenca = hoje - dataObj;
       const dias = Math.floor(diferenca / (1000 * 60 * 60 * 24));
       
       return dias > 0 ? dias : 0;
@@ -61,26 +61,26 @@ function App() {
     try {
       if (!dataInicial || !dataFinal) return 0;
       
-      let data1, data2;
+      let d1, d2;
       if (dataInicial.includes('/')) {
-        const [dia, mes, ano] = dataInicial.split('/');
-        data1 = new Date(ano, mes - 1, dia);
-        const [dia2, mes2, ano2] = dataFinal.split('/');
-        data2 = new Date(ano2, mes2 - 1, dia2);
+        const p1 = dataInicial.split('/');
+        d1 = new Date(p1[2], p1[1] - 1, p1[0]);
+        const p2 = dataFinal.split('/');
+        d2 = new Date(p2[2], p2[1] - 1, p2[0]);
       } else if (dataInicial.includes('-')) {
-        data1 = new Date(dataInicial);
-        data2 = new Date(dataFinal);
+        d1 = new Date(dataInicial);
+        d2 = new Date(dataFinal);
       } else {
-        data1 = new Date(dataInicial);
-        data2 = new Date(dataFinal);
+        d1 = new Date(dataInicial);
+        d2 = new Date(dataFinal);
       }
       
-      if (isNaN(data1.getTime()) || isNaN(data2.getTime())) return 0;
+      if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return 0;
       
-      data1.setHours(0, 0, 0, 0);
-      data2.setHours(0, 0, 0, 0);
+      d1.setHours(0, 0, 0, 0);
+      d2.setHours(0, 0, 0, 0);
       
-      const diferenca = data2 - data1;
+      const diferenca = d2 - d1;
       const dias = Math.floor(diferenca / (1000 * 60 * 60 * 24));
       
       return dias >= 0 ? dias : 0;
@@ -89,13 +89,16 @@ function App() {
     }
   };
 
-  // Função para sincronizar dados - Envolvida em useCallback para evitar avisos de dependência
+  // Função para sincronizar dados
   const syncData = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const sheetId = GOOGLE_SHEET_LINK.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)[1];
+      const match = GOOGLE_SHEET_LINK.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+      if (!match) throw new Error('Link da planilha inválido');
+      
+      const sheetId = match[1];
       const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0`;
 
       const response = await fetch(csvUrl);
@@ -147,11 +150,11 @@ function App() {
                 try {
                   let mes = '';
                   if (dataFinal.includes('/')) {
-                    const [_, mesNum, ano] = dataFinal.split('/'); // Corrigido: dia para _
-                    mes = `${mesNum}/${ano}`;
+                    const partes = dataFinal.split('/');
+                    mes = `${partes[1]}/${partes[2]}`; 
                   } else if (dataFinal.includes('-')) {
-                    const [ano, mesNum, _] = dataFinal.split('-'); // Corrigido: dia para _
-                    mes = `${mesNum}/${ano}`;
+                    const partes = dataFinal.split('-');
+                    mes = `${partes[1]}/${partes[0]}`;
                   }
                   
                   if (mes) {
@@ -187,10 +190,10 @@ function App() {
                 leadTime: Math.round(dados.total / dados.count)
               }))
               .sort((a, b) => {
-                const [mesA, anoA] = a.mes.split('/');
-                const [mesB, anoB] = b.mes.split('/');
-                if (anoA !== anoB) return anoA - anoB;
-                return mesA - mesB;
+                const pA = a.mes.split('/');
+                const pB = b.mes.split('/');
+                if (pA[1] !== pB[1]) return pA[1] - pB[1];
+                return pA[0] - pB[0];
               });
 
             const mediaAgRetorno = countAgRetorno > 0 ? Math.round(diasAgRetorno / countAgRetorno) : 0;
@@ -223,23 +226,19 @@ function App() {
       setError(err.message);
       setLoading(false);
     }
-  }, []); // Dependências vazias para useCallback
+  }, []);
 
-  // Sincronizar ao carregar
   useEffect(() => {
     syncData();
-  }, [syncData]); // Adicionado syncData como dependência
+  }, [syncData]);
 
-  // Atualizar automaticamente a cada 30 minutos
   useEffect(() => {
     const interval = setInterval(() => {
       syncData();
     }, 30 * 60 * 1000);
-
     return () => clearInterval(interval);
-  }, [syncData]); // Adicionado syncData como dependência
+  }, [syncData]);
 
-  // Filtrar itens
   const filteredItems = data?.items.filter(item => {
     const matchName = item.item.toLowerCase().includes(filterName.toLowerCase());
     const matchStatus = filterStatus === '' || item.situacao === filterStatus;
