@@ -20,6 +20,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastSync, setLastSync] = useState(null);
+  const [activeTab, setActiveTab] = useState('dashboard');
 
   // Função para sincronizar dados
   const syncData = async () => {
@@ -125,161 +126,173 @@ function App() {
 
   return (
     <div style={styles.container}>
-      {/* HEADER SOFISTICADO */}
+      {/* HEADER */}
       <header style={styles.header}>
         <div style={styles.headerContent}>
-          <div style={styles.headerTop}>
-            <div>
-              <h1 style={styles.title}>Dashboard de Desenvolvimento</h1>
-              <p style={styles.subtitle}>Análise em tempo real de itens de desenvolvimento</p>
-            </div>
-            <div style={styles.syncInfo}>
-              {lastSync && (
-                <div style={styles.lastSyncBox}>
-                  <p style={styles.lastSyncLabel}>Última atualização</p>
-                  <p style={styles.lastSyncTime}>{lastSync}</p>
-                </div>
-              )}
-              <button
-                onClick={syncData}
-                disabled={loading}
-                style={{...styles.button, ...styles.buttonRefresh}}
-              >
-                {loading ? '⏳ Atualizando...' : '🔄 Atualizar Agora'}
-              </button>
-            </div>
+          <div style={styles.logo}>
+            <span style={styles.logoIcon}>📊</span>
+            <span style={styles.logoText}>Dashboard</span>
           </div>
+          <div style={styles.headerRight}>
+            <button
+              onClick={syncData}
+              disabled={loading}
+              style={{...styles.button, ...styles.buttonSync}}
+            >
+              {loading ? '⏳ Sincronizando...' : '🔄 Atualizar'}
+            </button>
+            {lastSync && (
+              <span style={styles.lastSyncText}>Atualizado: {lastSync}</span>
+            )}
+          </div>
+        </div>
+
+        {/* ABAS DE NAVEGAÇÃO */}
+        <div style={styles.tabsContainer}>
+          <button
+            onClick={() => setActiveTab('dashboard')}
+            style={{
+              ...styles.tab,
+              ...(activeTab === 'dashboard' ? styles.tabActive : {})
+            }}
+          >
+            Dashboard
+          </button>
+          <button
+            onClick={() => setActiveTab('tabela')}
+            style={{
+              ...styles.tab,
+              ...(activeTab === 'tabela' ? styles.tabActive : {})
+            }}
+          >
+            Lista de Itens
+          </button>
         </div>
       </header>
 
       {/* MAIN CONTENT */}
       <main style={styles.main}>
-        <div style={styles.content}>
-          {error && (
-            <div style={styles.messageError}>
-              <p style={styles.messageTitle}>❌ Erro ao carregar dados</p>
-              <p style={styles.messageText}>{error}</p>
-            </div>
-          )}
+        {error && (
+          <div style={styles.messageError}>
+            <p style={styles.messageTitle}>❌ Erro ao carregar dados</p>
+            <p style={styles.messageText}>{error}</p>
+          </div>
+        )}
 
-          {loading && !data && (
-            <div style={styles.loadingContainer}>
-              <div style={styles.spinner}></div>
-              <p style={styles.loadingText}>Carregando dados...</p>
-            </div>
-          )}
+        {loading && !data && (
+          <div style={styles.loadingContainer}>
+            <div style={styles.spinner}></div>
+            <p style={styles.loadingText}>Carregando dados...</p>
+          </div>
+        )}
 
-          {data && (
-            <>
-              {/* CARDS DE ESTATÍSTICAS */}
-              <section style={styles.statsSection}>
-                <div style={styles.statsGrid}>
-                  <div style={styles.statCard}>
-                    <div style={styles.statIcon}>📊</div>
-                    <div style={styles.statLabel}>Total de Itens</div>
-                    <div style={styles.statValue}>{data.totalItems}</div>
-                  </div>
+        {data && activeTab === 'dashboard' && (
+          <div style={styles.content}>
+            {/* KPI CARDS */}
+            <section style={styles.kpiSection}>
+              <div style={styles.kpiGrid}>
+                <div style={styles.kpiCard}>
+                  <div style={styles.kpiLabel}>Total de Itens</div>
+                  <div style={styles.kpiValue}>{data.totalItems}</div>
+                  <div style={styles.kpiBar} style={{width: '100%', height: '4px', backgroundColor: '#e5e7eb', borderRadius: '2px'}}></div>
+                </div>
 
-                  {Object.entries(data.counts).map(([situacao, count]) => (
-                    <div key={situacao} style={styles.statCard}>
-                      <div style={{...styles.statIcon, color: COLORS[situacao]}}>●</div>
-                      <div style={styles.statLabel}>{situacao}</div>
-                      <div style={{...styles.statValue, color: COLORS[situacao]}}>
-                        {count}
-                      </div>
-                      <div style={styles.statPercentage}>
-                        {((count / data.totalItems) * 100).toFixed(1)}%
-                      </div>
+                {Object.entries(data.counts).map(([situacao, count]) => (
+                  <div key={situacao} style={styles.kpiCard}>
+                    <div style={styles.kpiLabel}>{situacao}</div>
+                    <div style={{...styles.kpiValue, color: COLORS[situacao]}}>
+                      {count}
                     </div>
-                  ))}
-                </div>
-              </section>
-
-              {/* GRÁFICOS */}
-              <section style={styles.chartsSection}>
-                <div style={styles.chartsGrid}>
-                  <div style={styles.chartCard}>
-                    <h3 style={styles.chartTitle}>📈 Distribuição por Situação</h3>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <PieChart>
-                        <Pie
-                          data={data.chartData}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, value }) => `${name}: ${value}`}
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {data.chartData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
+                    <div style={{...styles.kpiPercentage, color: COLORS[situacao]}}>
+                      {((count / data.totalItems) * 100).toFixed(1)}%
+                    </div>
                   </div>
+                ))}
+              </div>
+            </section>
 
-                  <div style={styles.chartCard}>
-                    <h3 style={styles.chartTitle}>📊 Contagem por Situação</h3>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={data.chartData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                        <XAxis dataKey="name" />
-                        <YAxis />
-                        <Tooltip />
-                        <Bar dataKey="value" fill="#8884d8" radius={[8, 8, 0, 0]}>
-                          {data.chartData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
+            {/* GRÁFICOS */}
+            <section style={styles.chartsSection}>
+              <div style={styles.chartsGrid}>
+                <div style={styles.chartCard}>
+                  <h3 style={styles.chartTitle}>Distribuição por Situação</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={data.chartData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, value }) => `${name}: ${value}`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {data.chartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
-              </section>
 
-              {/* TABELA */}
-              <section style={styles.tableSection}>
-                <h3 style={styles.tableTitle}>📋 Lista de Itens</h3>
-                <div style={styles.tableWrapper}>
-                  <table style={styles.table}>
-                    <thead>
-                      <tr style={styles.tableHeaderRow}>
-                        <th style={styles.tableHeader}>Item</th>
-                        <th style={styles.tableHeader}>Situação</th>
+                <div style={styles.chartCard}>
+                  <h3 style={styles.chartTitle}>Contagem por Situação</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={data.chartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="value" fill="#8884d8" radius={[8, 8, 0, 0]}>
+                        {data.chartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </section>
+          </div>
+        )}
+
+        {data && activeTab === 'tabela' && (
+          <div style={styles.content}>
+            <section style={styles.tableSection}>
+              <h3 style={styles.tableTitle}>Lista de Itens</h3>
+              <div style={styles.tableWrapper}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr style={styles.tableHeaderRow}>
+                      <th style={styles.tableHeader}>Item</th>
+                      <th style={styles.tableHeader}>Situação</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.items.map((item, idx) => (
+                      <tr key={idx} style={styles.tableRow}>
+                        <td style={styles.tableCell}>{item.item}</td>
+                        <td style={styles.tableCell}>
+                          <span
+                            style={{
+                              ...styles.badge,
+                              backgroundColor: COLORS[item.situacao]
+                            }}
+                          >
+                            {item.situacao}
+                          </span>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {data.items.map((item, idx) => (
-                        <tr key={idx} style={styles.tableRow}>
-                          <td style={styles.tableCell}>{item.item}</td>
-                          <td style={styles.tableCell}>
-                            <span
-                              style={{
-                                ...styles.badge,
-                                backgroundColor: COLORS[item.situacao]
-                              }}
-                            >
-                              {item.situacao}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            </>
-          )}
-        </div>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        )}
       </main>
-
-      {/* FOOTER */}
-      <footer style={styles.footer}>
-        <p>Dashboard de Desenvolvimento • Atualização automática a cada 30 minutos</p>
-      </footer>
     </div>
   );
 }
@@ -289,88 +302,95 @@ const styles = {
     minHeight: '100vh',
     display: 'flex',
     flexDirection: 'column',
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f5f7fa',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif'
   },
   header: {
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    background: '#1e3a5f',
     color: 'white',
-    padding: '40px 20px',
-    boxShadow: '0 10px 30px rgba(102, 126, 234, 0.3)'
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
   },
   headerContent: {
-    maxWidth: '1400px',
-    margin: '0 auto'
-  },
-  headerTop: {
+    padding: '20px 30px',
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    maxWidth: '1400px',
+    margin: '0 auto',
+    width: '100%'
+  },
+  logo: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    fontSize: '1.3rem',
+    fontWeight: '700'
+  },
+  logoIcon: {
+    fontSize: '1.8rem'
+  },
+  logoText: {
+    letterSpacing: '0.5px'
+  },
+  headerRight: {
+    display: 'flex',
+    alignItems: 'center',
     gap: '20px'
   },
-  title: {
-    fontSize: '2.5rem',
-    fontWeight: '700',
-    margin: '0 0 10px 0'
-  },
-  subtitle: {
-    fontSize: '1rem',
-    opacity: 0.9,
-    margin: 0
-  },
-  syncInfo: {
-    display: 'flex',
-    gap: '15px',
-    alignItems: 'center'
-  },
-  lastSyncBox: {
-    background: 'rgba(255, 255, 255, 0.15)',
-    backdropFilter: 'blur(10px)',
-    padding: '12px 20px',
-    borderRadius: '8px',
-    border: '1px solid rgba(255, 255, 255, 0.2)'
-  },
-  lastSyncLabel: {
-    fontSize: '0.85rem',
-    opacity: 0.8,
-    margin: 0
-  },
-  lastSyncTime: {
-    fontSize: '1.2rem',
-    fontWeight: '600',
-    margin: '5px 0 0 0'
-  },
   button: {
-    padding: '10px 20px',
+    padding: '8px 16px',
     border: 'none',
-    borderRadius: '6px',
-    fontSize: '0.95rem',
+    borderRadius: '4px',
+    fontSize: '0.9rem',
     fontWeight: '600',
     cursor: 'pointer',
     transition: 'all 0.2s',
     fontFamily: 'inherit'
   },
-  buttonRefresh: {
-    background: 'rgba(255, 255, 255, 0.2)',
+  buttonSync: {
+    backgroundColor: '#0ea5e9',
+    color: 'white'
+  },
+  lastSyncText: {
+    fontSize: '0.85rem',
+    opacity: 0.8
+  },
+  tabsContainer: {
+    display: 'flex',
+    borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+    paddingLeft: '30px'
+  },
+  tab: {
+    padding: '15px 20px',
+    background: 'transparent',
+    border: 'none',
+    color: 'rgba(255, 255, 255, 0.6)',
+    cursor: 'pointer',
+    fontSize: '0.95rem',
+    fontWeight: '500',
+    borderBottom: '3px solid transparent',
+    transition: 'all 0.2s'
+  },
+  tabActive: {
     color: 'white',
-    border: '1px solid rgba(255, 255, 255, 0.3)',
-    backdropFilter: 'blur(10px)'
+    borderBottomColor: '#0ea5e9'
   },
   main: {
     flex: 1,
-    padding: '40px 20px'
+    padding: '30px'
   },
   content: {
     maxWidth: '1400px',
     margin: '0 auto',
     display: 'flex',
     flexDirection: 'column',
-    gap: '30px'
+    gap: '30px',
+    width: '100%'
   },
   messageError: {
     background: '#fee2e2',
     border: '1px solid #fecaca',
-    borderRadius: '12px',
+    borderRadius: '8px',
     padding: '20px',
     color: '#991b1b'
   },
@@ -394,7 +414,7 @@ const styles = {
     width: '50px',
     height: '50px',
     border: '4px solid #e5e7eb',
-    borderTop: '4px solid #667eea',
+    borderTop: '4px solid #0ea5e9',
     borderRadius: '50%',
     animation: 'spin 1s linear infinite'
   },
@@ -402,45 +422,38 @@ const styles = {
     fontSize: '1.1rem',
     color: '#6b7280'
   },
-  statsSection: {
+  kpiSection: {
     padding: '0'
   },
-  statsGrid: {
+  kpiGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: '20px'
+    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+    gap: '15px'
   },
-  statCard: {
+  kpiCard: {
     background: 'white',
-    borderRadius: '12px',
-    padding: '24px',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-    textAlign: 'center',
-    border: '1px solid #e5e7eb',
-    transition: 'all 0.3s',
-    cursor: 'pointer'
+    borderRadius: '8px',
+    padding: '20px',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
+    border: '1px solid #e5e7eb'
   },
-  statIcon: {
-    fontSize: '2rem',
-    marginBottom: '10px'
-  },
-  statLabel: {
-    fontSize: '0.85rem',
+  kpiLabel: {
+    fontSize: '0.8rem',
     color: '#6b7280',
     fontWeight: '600',
     textTransform: 'uppercase',
-    letterSpacing: '0.5px',
+    letterSpacing: '0.3px',
     marginBottom: '10px'
   },
-  statValue: {
-    fontSize: '2.5rem',
+  kpiValue: {
+    fontSize: '2.2rem',
     fontWeight: '700',
-    color: '#1f2937',
-    marginBottom: '5px'
+    color: '#1e3a5f',
+    marginBottom: '8px'
   },
-  statPercentage: {
-    fontSize: '0.9rem',
-    color: '#9ca3af'
+  kpiPercentage: {
+    fontSize: '0.85rem',
+    fontWeight: '600'
   },
   chartsSection: {
     padding: '0'
@@ -452,32 +465,33 @@ const styles = {
   },
   chartCard: {
     background: 'white',
-    borderRadius: '12px',
-    padding: '24px',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+    borderRadius: '8px',
+    padding: '20px',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
     border: '1px solid #e5e7eb'
   },
   chartTitle: {
     marginBottom: '20px',
-    color: '#1f2937',
-    fontSize: '1.1rem',
-    margin: '0 0 20px 0'
+    color: '#1e3a5f',
+    fontSize: '1rem',
+    margin: '0 0 20px 0',
+    fontWeight: '600'
   },
   tableSection: {
     padding: '0'
   },
   tableTitle: {
-    fontSize: '1.2rem',
+    fontSize: '1.1rem',
     fontWeight: '600',
-    color: '#1f2937',
+    color: '#1e3a5f',
     marginBottom: '20px',
     margin: '0 0 20px 0'
   },
   tableWrapper: {
     background: 'white',
-    borderRadius: '12px',
-    padding: '24px',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+    borderRadius: '8px',
+    padding: '20px',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
     border: '1px solid #e5e7eb',
     overflowX: 'auto'
   },
@@ -486,14 +500,15 @@ const styles = {
     borderCollapse: 'collapse'
   },
   tableHeaderRow: {
-    backgroundColor: '#f3f4f6'
+    backgroundColor: '#f5f7fa'
   },
   tableHeader: {
     padding: '12px',
     textAlign: 'left',
     fontWeight: '600',
-    color: '#1f2937',
-    borderBottom: '2px solid #e5e7eb'
+    color: '#1e3a5f',
+    borderBottom: '2px solid #e5e7eb',
+    fontSize: '0.9rem'
   },
   tableRow: {
     borderBottom: '1px solid #e5e7eb',
@@ -501,22 +516,16 @@ const styles = {
   },
   tableCell: {
     padding: '12px',
-    color: '#4b5563'
+    color: '#4b5563',
+    fontSize: '0.95rem'
   },
   badge: {
     display: 'inline-block',
     padding: '6px 12px',
-    borderRadius: '20px',
-    fontSize: '0.85rem',
+    borderRadius: '4px',
+    fontSize: '0.8rem',
     fontWeight: '600',
     color: 'white'
-  },
-  footer: {
-    background: '#1f2937',
-    color: '#9ca3af',
-    padding: '20px',
-    textAlign: 'center',
-    fontSize: '0.9rem'
   }
 };
 
