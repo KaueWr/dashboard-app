@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Papa from 'papaparse';
 import {
   BarChart, Bar, PieChart, Pie, XAxis, YAxis,
-  CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell
+  CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
  
 const COLORS = {
