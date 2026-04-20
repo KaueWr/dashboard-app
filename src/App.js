@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 import {
   BarChart, Bar, PieChart, Pie, XAxis, YAxis,
