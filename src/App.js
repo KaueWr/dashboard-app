@@ -13,7 +13,7 @@ const COLORS = {
 };
 
 // ⭐ LINK DO GOOGLE SHEETS INTEGRADO AQUI
-const GOOGLE_SHEET_LINK = 'https://docs.google.com/spreadsheets/d/1urzSyHpTI9QvP3xG7k4OmocVEaTKcaDjuwat1xdN38Y/edit?usp=drive_link';
+const GOOGLE_SHEET_LINK = 'https://docs.google.com/spreadsheets/d/1urzSyHpTI9QvP3xG7k4OmocVEaTKcaDjuwat1xdN38Y/edit?usp=sharing';
 
 // ⭐ URL DO GOOGLE APPS SCRIPT AQUI (VOCÊ VAI COLOCAR DEPOIS DE PUBLICAR O SCRIPT)
 const GOOGLE_APPS_SCRIPT_URL = 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE'; 
@@ -31,12 +31,13 @@ function App() {
 
   // Estado do Formulário de Cadastro
   const [formArtigo, setFormArtigo] = useState({
-    nomeArtigo: '',
+    nomeProduto: '', // Corrigido para nomeProduto
+    malharia: '',    // Novo campo
+    representante: '', // Novo campo
     cliente: '',
-    dataInicial: '',
-    dataFinal: '',
+    dataProjeto: '', // Corrigido para dataProjeto
+    dataEnvio: '',   // Corrigido para dataEnvio
     situacao: '',
-    responsavel: '',
     observacoes: ''
   });
   const [formMessage, setFormMessage] = useState({ type: '', text: '' });
@@ -146,39 +147,41 @@ function App() {
               // Ajustado para 8 colunas, considerando a nova estrutura do Apps Script
               if (!row || row.length < 8) continue;
 
-              // ⭐ CORREÇÃO AQUI: Ajuste dos índices das colunas
-              const itemName = String(row[0] || '').trim(); // Coluna A
-              const cliente = String(row[1] || '').trim(); // Coluna B
-              const dataInicial = String(row[2] || '').trim(); // Coluna C
-              const dataFinal = String(row[3] || '').trim();   // Coluna D
-              const situacao = String(row[4] || '').trim(); // Coluna E
-              const responsavel = String(row[5] || '').trim(); // Coluna F
-              const observacoes = String(row[6] || '').trim(); // Coluna G
-              // const dataCadastro = String(row[7] || '').trim(); // Coluna H - Não usada diretamente no dashboard
+              // ⭐ CORREÇÃO AQUI: Ajuste dos índices das colunas conforme a descrição do usuário
+              const nomeProduto = String(row[0] || '').trim(); // Coluna A
+              const malharia = String(row[1] || '').trim();    // Coluna B
+              const representante = String(row[2] || '').trim(); // Coluna C
+              const cliente = String(row[3] || '').trim(); // Coluna D
+              const dataProjeto = String(row[4] || '').trim(); // Coluna E
+              const dataEnvio = String(row[5] || '').trim();   // Coluna F
+              const situacao = String(row[6] || '').trim(); // Coluna G (Assumido)
+              const observacoes = String(row[7] || '').trim(); // Coluna H
 
-              if (!itemName || !situacao) continue;
+              if (!nomeProduto || !situacao) continue;
 
               items.push({
-                item: itemName,
+                item: nomeProduto, // Usando nomeProduto como item
+                malharia: malharia,
+                representante: representante,
                 cliente: cliente,
                 situacao: situacao,
-                dataInicial: dataInicial,
-                dataFinal: dataFinal,
-                responsavel: responsavel,
+                dataInicial: dataProjeto, // Mapeando para dataInicial
+                dataFinal: dataEnvio,     // Mapeando para dataFinal
                 observacoes: observacoes
               });
 
               counts[situacao] = (counts[situacao] || 0) + 1;
 
-              if (dataInicial && dataFinal) {
-                const leadTime = calcularLeadTime(dataInicial, dataFinal);
+              // Usando dataProjeto e dataEnvio para calcular lead time
+              if (dataProjeto && dataEnvio) {
+                const leadTime = calcularLeadTime(dataProjeto, dataEnvio);
                 try {
                   let mes = '';
-                  if (dataFinal.includes('/')) {
-                    const partes = dataFinal.split('/');
+                  if (dataEnvio.includes('/')) {
+                    const partes = dataEnvio.split('/');
                     mes = `${partes[1]}/${partes[2]}`; 
-                  } else if (dataFinal.includes('-')) {
-                    const partes = dataFinal.split('-');
+                  } else if (dataEnvio.includes('-')) {
+                    const partes = dataEnvio.split('-');
                     mes = `${partes[1]}/${partes[0]}`;
                   }
                   
@@ -192,8 +195,9 @@ function App() {
                 } catch (e) {}
               }
 
-              if (situacao === 'AG. RETORNO' && dataFinal) {
-                const dias = calcularDiasPassados(dataFinal);
+              // Usando dataEnvio para AG. RETORNO
+              if (situacao === 'AG. RETORNO' && dataEnvio) {
+                const dias = calcularDiasPassados(dataEnvio);
                 diasAgRetorno += dias;
                 countAgRetorno++;
               }
@@ -281,8 +285,17 @@ function App() {
       const dataCadastro = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
 
       const payload = {
-        ...formArtigo,
-        dataCadastro: dataCadastro
+        // ⭐ ATENÇÃO: Os nomes das propriedades aqui devem corresponder aos cabeçalhos da sua planilha
+        // e à ordem esperada pelo Google Apps Script (google_apps_script.js)
+        "NOME DO PRODUTO": formArtigo.nomeProduto,
+        "MALHARIA": formArtigo.malharia,
+        "REPRESENTANTE": formArtigo.representante,
+        "CLIENTE": formArtigo.cliente,
+        "DATA DO PROJETO": formArtigo.dataProjeto,
+        "DATA DE ENVIO": formArtigo.dataEnvio,
+        "SITUAÇÃO": formArtigo.situacao,
+        "OBSERVAÇÃO": formArtigo.observacoes,
+        "DATA DE CADASTRO": dataCadastro // Adicionado automaticamente
       };
 
       const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
@@ -295,18 +308,15 @@ function App() {
         body: JSON.stringify(payload),
       });
 
-      // Como usamos 'no-cors', a resposta 'response.ok' sempre será true.
-      // Precisamos confiar que o Apps Script processou. Uma forma mais robusta
-      // seria o Apps Script retornar um JSON e o frontend fazer um segundo fetch
-      // para um endpoint de verificação, mas para simplicidade, vamos assumir sucesso.
       setFormMessage({ type: 'success', text: 'Artigo cadastrado com sucesso! Sincronize o dashboard para ver as mudanças.' });
       setFormArtigo({
-        nomeArtigo: '',
+        nomeProduto: '',
+        malharia: '',
+        representante: '',
         cliente: '',
-        dataInicial: '',
-        dataFinal: '',
+        dataProjeto: '',
+        dataEnvio: '',
         situacao: '',
-        responsavel: '',
         observacoes: ''
       });
       syncData(); // Sincroniza o dashboard após o cadastro
@@ -452,19 +462,22 @@ function App() {
               <table style={styles.table}>
                 <thead>
                   <tr>
-                    <th style={styles.th}>Item</th>
+                    <th style={styles.th}>Nome do Produto</th>
+                    <th style={styles.th}>Malharia</th>
+                    <th style={styles.th}>Representante</th>
                     <th style={styles.th}>Cliente</th>
                     <th style={styles.th}>Situação</th>
-                    <th style={styles.th}>Data Inicial</th>
-                    <th style={styles.th}>Data Final</th>
-                    <th style={styles.th}>Responsável</th>
-                    <th style={styles.th}>Observações</th>
+                    <th style={styles.th}>Data do Projeto</th>
+                    <th style={styles.th}>Data de Envio</th>
+                    <th style={styles.th}>Observação</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredItems.map((item, index) => (
                     <tr key={index}>
                       <td style={styles.td}>{item.item}</td>
+                      <td style={styles.td}>{item.malharia}</td>
+                      <td style={styles.td}>{item.representante}</td>
                       <td style={styles.td}>{item.cliente}</td>
                       <td style={styles.td}>
                         <span style={{...styles.badge, backgroundColor: COLORS[item.situacao] + '20', color: COLORS[item.situacao]}}>
@@ -473,7 +486,6 @@ function App() {
                       </td>
                       <td style={styles.td}>{item.dataInicial}</td>
                       <td style={styles.td}>{item.dataFinal}</td>
-                      <td style={styles.td}>{item.responsavel}</td>
                       <td style={styles.td}>{item.observacoes}</td>
                     </tr>
                   ))}
@@ -490,20 +502,28 @@ function App() {
             {formMessage.type === 'error' && <div style={styles.messageErrorForm}>{formMessage.text}</div>}
             <form onSubmit={handleSubmit}>
               <div style={styles.formGroup}>
-                <label htmlFor="nomeArtigo" style={styles.formLabel}>Nome do Artigo:</label>
-                <input type="text" id="nomeArtigo" name="nomeArtigo" value={formArtigo.nomeArtigo} onChange={(e) => setFormArtigo({...formArtigo, nomeArtigo: e.target.value})} style={styles.formInput} required />
+                <label htmlFor="nomeProduto" style={styles.formLabel}>Nome do Produto:</label>
+                <input type="text" id="nomeProduto" name="nomeProduto" value={formArtigo.nomeProduto} onChange={(e) => setFormArtigo({...formArtigo, nomeProduto: e.target.value})} style={styles.formInput} required />
+              </div>
+              <div style={styles.formGroup}>
+                <label htmlFor="malharia" style={styles.formLabel}>Malharia:</label>
+                <input type="text" id="malharia" name="malharia" value={formArtigo.malharia} onChange={(e) => setFormArtigo({...formArtigo, malharia: e.target.value})} style={styles.formInput} />
+              </div>
+              <div style={styles.formGroup}>
+                <label htmlFor="representante" style={styles.formLabel}>Representante:</label>
+                <input type="text" id="representante" name="representante" value={formArtigo.representante} onChange={(e) => setFormArtigo({...formArtigo, representante: e.target.value})} style={styles.formInput} />
               </div>
               <div style={styles.formGroup}>
                 <label htmlFor="cliente" style={styles.formLabel}>Cliente:</label>
                 <input type="text" id="cliente" name="cliente" value={formArtigo.cliente} onChange={(e) => setFormArtigo({...formArtigo, cliente: e.target.value})} style={styles.formInput} required />
               </div>
               <div style={styles.formGroup}>
-                <label htmlFor="dataInicial" style={styles.formLabel}>Data Inicial:</label>
-                <input type="date" id="dataInicial" name="dataInicial" value={formArtigo.dataInicial} onChange={(e) => setFormArtigo({...formArtigo, dataInicial: e.target.value})} style={styles.formInput} />
+                <label htmlFor="dataProjeto" style={styles.formLabel}>Data do Projeto:</label>
+                <input type="date" id="dataProjeto" name="dataProjeto" value={formArtigo.dataProjeto} onChange={(e) => setFormArtigo({...formArtigo, dataProjeto: e.target.value})} style={styles.formInput} />
               </div>
               <div style={styles.formGroup}>
-                <label htmlFor="dataFinal" style={styles.formLabel}>Data Final:</label>
-                <input type="date" id="dataFinal" name="dataFinal" value={formArtigo.dataFinal} onChange={(e) => setFormArtigo({...formArtigo, dataFinal: e.target.value})} style={styles.formInput} />
+                <label htmlFor="dataEnvio" style={styles.formLabel}>Data de Envio:</label>
+                <input type="date" id="dataEnvio" name="dataEnvio" value={formArtigo.dataEnvio} onChange={(e) => setFormArtigo({...formArtigo, dataEnvio: e.target.value})} style={styles.formInput} />
               </div>
               <div style={styles.formGroup}>
                 <label htmlFor="situacao" style={styles.formLabel}>Situação:</label>
@@ -513,11 +533,7 @@ function App() {
                 </select>
               </div>
               <div style={styles.formGroup}>
-                <label htmlFor="responsavel" style={styles.formLabel}>Responsável:</label>
-                <input type="text" id="responsavel" name="responsavel" value={formArtigo.responsavel} onChange={(e) => setFormArtigo({...formArtigo, responsavel: e.target.value})} style={styles.formInput} />
-              </div>
-              <div style={styles.formGroup}>
-                <label htmlFor="observacoes" style={styles.formLabel}>Observações:</label>
+                <label htmlFor="observacoes" style={styles.formLabel}>Observação:</label>
                 <textarea id="observacoes" name="observacoes" value={formArtigo.observacoes} onChange={(e) => setFormArtigo({...formArtigo, observacoes: e.target.value})} style={styles.formTextarea}></textarea>
               </div>
               <button type="submit" disabled={submitting} style={styles.formButton}>
