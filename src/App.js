@@ -143,8 +143,10 @@ function App() {
 
             for (let i = 2; i < rows.length; i++) { // Começa da linha 3 da planilha (índice 2)
               const row = rows[i];
-              if (!row || row.length < 7) continue;
+              // Ajustado para 8 colunas, considerando a nova estrutura do Apps Script
+              if (!row || row.length < 8) continue;
 
+              // ⭐ CORREÇÃO AQUI: Ajuste dos índices das colunas
               const itemName = String(row[0] || '').trim(); // Coluna A
               const cliente = String(row[1] || '').trim(); // Coluna B
               const dataInicial = String(row[2] || '').trim(); // Coluna C
@@ -152,6 +154,7 @@ function App() {
               const situacao = String(row[4] || '').trim(); // Coluna E
               const responsavel = String(row[5] || '').trim(); // Coluna F
               const observacoes = String(row[6] || '').trim(); // Coluna G
+              // const dataCadastro = String(row[7] || '').trim(); // Coluna H - Não usada diretamente no dashboard
 
               if (!itemName || !situacao) continue;
 
@@ -203,7 +206,7 @@ function App() {
             const chartData = Object.entries(counts).map(([name, value]) => ({
               name,
               value,
-              fill: COLORS[name] || '#6b7280'
+              fill: COLORS[name] || '#6b7280' // Garante que as cores sejam as definidas
             }));
 
             const leadTimeChartData = Object.entries(leadTimesByMonth)
