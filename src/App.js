@@ -15,16 +15,32 @@ const COLORS = {
 // ⭐ LINK DO GOOGLE SHEETS INTEGRADO AQUI
 const GOOGLE_SHEET_LINK = 'https://docs.google.com/spreadsheets/d/1urzSyHpTI9QvP3xG7k4OmocVEaTKcaDjuwat1xdN38Y/edit?usp=drive_link';
 
+// ⭐ URL DO GOOGLE APPS SCRIPT AQUI (VOCÊ VAI COLOCAR DEPOIS DE PUBLICAR O SCRIPT)
+const GOOGLE_APPS_SCRIPT_URL = 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE'; 
+
 function App() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastSync, setLastSync] = useState(null);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'tabela', 'cadastro'
   
   // Filtros
   const [filterName, setFilterName] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+
+  // Estado do Formulário de Cadastro
+  const [formArtigo, setFormArtigo] = useState({
+    nomeArtigo: '',
+    cliente: '',
+    dataInicial: '',
+    dataFinal: '',
+    situacao: '',
+    responsavel: '',
+    observacoes: ''
+  });
+  const [formMessage, setFormMessage] = useState({ type: '', text: '' });
+  const [submitting, setSubmitting] = useState(false);
 
   // Função para calcular dias passados
   const calcularDiasPassados = (dataString) => {
@@ -125,22 +141,28 @@ function App() {
             let diasAgRetorno = 0;
             let countAgRetorno = 0;
 
-            for (let i = 2; i < rows.length; i++) {
+            for (let i = 2; i < rows.length; i++) { // Começa da linha 3 da planilha (índice 2)
               const row = rows[i];
               if (!row || row.length < 7) continue;
 
-              const itemName = String(row[0] || '').trim();
-              const situacao = String(row[6] || '').trim();
-              const dataInicial = String(row[4] || '').trim();
-              const dataFinal = String(row[5] || '').trim();
+              const itemName = String(row[0] || '').trim(); // Coluna A
+              const cliente = String(row[1] || '').trim(); // Coluna B
+              const dataInicial = String(row[2] || '').trim(); // Coluna C
+              const dataFinal = String(row[3] || '').trim();   // Coluna D
+              const situacao = String(row[4] || '').trim(); // Coluna E
+              const responsavel = String(row[5] || '').trim(); // Coluna F
+              const observacoes = String(row[6] || '').trim(); // Coluna G
 
               if (!itemName || !situacao) continue;
 
               items.push({
                 item: itemName,
+                cliente: cliente,
                 situacao: situacao,
                 dataInicial: dataInicial,
-                dataFinal: dataFinal
+                dataFinal: dataFinal,
+                responsavel: responsavel,
+                observacoes: observacoes
               });
 
               counts[situacao] = (counts[situacao] || 0) + 1;
@@ -239,6 +261,61 @@ function App() {
     return () => clearInterval(interval);
   }, [syncData]);
 
+  // Lógica de envio do formulário
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setFormMessage({ type: '', text: '' });
+
+    if (!GOOGLE_APPS_SCRIPT_URL || GOOGLE_APPS_SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE') {
+      setFormMessage({ type: 'error', text: 'Por favor, configure a URL do Google Apps Script.' });
+      setSubmitting(false);
+      return;
+    }
+
+    try {
+      const now = new Date();
+      const dataCadastro = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
+
+      const payload = {
+        ...formArtigo,
+        dataCadastro: dataCadastro
+      };
+
+      const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors', // Necessário para Google Apps Script
+        cache: 'no-cache',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      // Como usamos 'no-cors', a resposta 'response.ok' sempre será true.
+      // Precisamos confiar que o Apps Script processou. Uma forma mais robusta
+      // seria o Apps Script retornar um JSON e o frontend fazer um segundo fetch
+      // para um endpoint de verificação, mas para simplicidade, vamos assumir sucesso.
+      setFormMessage({ type: 'success', text: 'Artigo cadastrado com sucesso! Sincronize o dashboard para ver as mudanças.' });
+      setFormArtigo({
+        nomeArtigo: '',
+        cliente: '',
+        dataInicial: '',
+        dataFinal: '',
+        situacao: '',
+        responsavel: '',
+        observacoes: ''
+      });
+      syncData(); // Sincroniza o dashboard após o cadastro
+
+    } catch (err) {
+      setFormMessage({ type: 'error', text: `Erro ao cadastrar: ${err.message}` });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Filtrar itens
   const filteredItems = data?.items.filter(item => {
     const matchName = item.item.toLowerCase().includes(filterName.toLowerCase());
     const matchStatus = filterStatus === '' || item.situacao === filterStatus;
@@ -272,7 +349,15 @@ function App() {
     td: { padding: '0.75rem', borderBottom: '1px solid #e5e7eb' },
     badge: { padding: '0.25rem 0.5rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '600' },
     filterContainer: { display: 'flex', gap: '1rem', marginBottom: '1rem' },
-    input: { padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid #d1d5db', flex: 1 }
+    input: { padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid #d1d5db', flex: 1 },
+    formGroup: { marginBottom: '1rem' },
+    formLabel: { display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#374151' },
+    formInput: { width: '100%', padding: '0.75rem', borderRadius: '0.375rem', border: '1px solid #d1d5db', boxSizing: 'border-box' },
+    formSelect: { width: '100%', padding: '0.75rem', borderRadius: '0.375rem', border: '1px solid #d1d5db', boxSizing: 'border-box' },
+    formTextarea: { width: '100%', padding: '0.75rem', borderRadius: '0.375rem', border: '1px solid #d1d5db', boxSizing: 'border-box', minHeight: '80px' },
+    formButton: { backgroundColor: '#10b981', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '0.375rem', border: 'none', cursor: 'pointer', fontWeight: '600', transition: 'background-color 0.2s', '&:hover': { backgroundColor: '#059669' } },
+    messageSuccess: { backgroundColor: '#d1fae5', color: '#065f46', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' },
+    messageErrorForm: { backgroundColor: '#fee2e2', color: '#b91c1c', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' }
   };
 
   if (loading && !data) return <div style={{...styles.container, display: 'flex', justifyContent: 'center', alignItems: 'center'}}><h2>Carregando Dashboard...</h2></div>;
@@ -295,13 +380,14 @@ function App() {
         <div style={styles.tabsContainer}>
           <button onClick={() => setActiveTab('dashboard')} style={{...styles.tab, ...(activeTab === 'dashboard' ? styles.tabActive : {})}}>Painel</button>
           <button onClick={() => setActiveTab('tabela')} style={{...styles.tab, ...(activeTab === 'tabela' ? styles.tabActive : {})}}>Lista de Itens</button>
+          <button onClick={() => setActiveTab('cadastro')} style={{...styles.tab, ...(activeTab === 'cadastro' ? styles.tabActive : {})}}>Cadastro de Artigo</button>
         </div>
       </header>
 
       <main style={styles.main}>
         {error && <div style={styles.messageError}>{error}</div>}
 
-        {activeTab === 'dashboard' ? (
+        {activeTab === 'dashboard' && (
           <>
             <div style={styles.grid}>
               <div style={styles.statCard}>
@@ -348,7 +434,9 @@ function App() {
               </div>
             </div>
           </>
-        ) : (
+        )}
+
+        {activeTab === 'tabela' && (
           <div style={styles.card}>
             <div style={styles.filterContainer}>
               <input type="text" placeholder="Filtrar por nome..." value={filterName} onChange={(e) => setFilterName(e.target.value)} style={styles.input} />
@@ -362,15 +450,19 @@ function App() {
                 <thead>
                   <tr>
                     <th style={styles.th}>Item</th>
+                    <th style={styles.th}>Cliente</th>
                     <th style={styles.th}>Situação</th>
                     <th style={styles.th}>Data Inicial</th>
                     <th style={styles.th}>Data Final</th>
+                    <th style={styles.th}>Responsável</th>
+                    <th style={styles.th}>Observações</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredItems.map((item, index) => (
                     <tr key={index}>
                       <td style={styles.td}>{item.item}</td>
+                      <td style={styles.td}>{item.cliente}</td>
                       <td style={styles.td}>
                         <span style={{...styles.badge, backgroundColor: COLORS[item.situacao] + '20', color: COLORS[item.situacao]}}>
                           {item.situacao}
@@ -378,11 +470,57 @@ function App() {
                       </td>
                       <td style={styles.td}>{item.dataInicial}</td>
                       <td style={styles.td}>{item.dataFinal}</td>
+                      <td style={styles.td}>{item.responsavel}</td>
+                      <td style={styles.td}>{item.observacoes}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'cadastro' && (
+          <div style={styles.card}>
+            <h3>Cadastro de Novo Artigo</h3>
+            {formMessage.type === 'success' && <div style={styles.messageSuccess}>{formMessage.text}</div>}
+            {formMessage.type === 'error' && <div style={styles.messageErrorForm}>{formMessage.text}</div>}
+            <form onSubmit={handleSubmit}>
+              <div style={styles.formGroup}>
+                <label htmlFor="nomeArtigo" style={styles.formLabel}>Nome do Artigo:</label>
+                <input type="text" id="nomeArtigo" name="nomeArtigo" value={formArtigo.nomeArtigo} onChange={(e) => setFormArtigo({...formArtigo, nomeArtigo: e.target.value})} style={styles.formInput} required />
+              </div>
+              <div style={styles.formGroup}>
+                <label htmlFor="cliente" style={styles.formLabel}>Cliente:</label>
+                <input type="text" id="cliente" name="cliente" value={formArtigo.cliente} onChange={(e) => setFormArtigo({...formArtigo, cliente: e.target.value})} style={styles.formInput} required />
+              </div>
+              <div style={styles.formGroup}>
+                <label htmlFor="dataInicial" style={styles.formLabel}>Data Inicial:</label>
+                <input type="date" id="dataInicial" name="dataInicial" value={formArtigo.dataInicial} onChange={(e) => setFormArtigo({...formArtigo, dataInicial: e.target.value})} style={styles.formInput} />
+              </div>
+              <div style={styles.formGroup}>
+                <label htmlFor="dataFinal" style={styles.formLabel}>Data Final:</label>
+                <input type="date" id="dataFinal" name="dataFinal" value={formArtigo.dataFinal} onChange={(e) => setFormArtigo({...formArtigo, dataFinal: e.target.value})} style={styles.formInput} />
+              </div>
+              <div style={styles.formGroup}>
+                <label htmlFor="situacao" style={styles.formLabel}>Situação:</label>
+                <select id="situacao" name="situacao" value={formArtigo.situacao} onChange={(e) => setFormArtigo({...formArtigo, situacao: e.target.value})} style={styles.formSelect} required>
+                  <option value="">Selecione uma situação</option>
+                  {Object.keys(COLORS).map(status => <option key={status} value={status}>{status}</option>)}
+                </select>
+              </div>
+              <div style={styles.formGroup}>
+                <label htmlFor="responsavel" style={styles.formLabel}>Responsável:</label>
+                <input type="text" id="responsavel" name="responsavel" value={formArtigo.responsavel} onChange={(e) => setFormArtigo({...formArtigo, responsavel: e.target.value})} style={styles.formInput} />
+              </div>
+              <div style={styles.formGroup}>
+                <label htmlFor="observacoes" style={styles.formLabel}>Observações:</label>
+                <textarea id="observacoes" name="observacoes" value={formArtigo.observacoes} onChange={(e) => setFormArtigo({...formArtigo, observacoes: e.target.value})} style={styles.formTextarea}></textarea>
+              </div>
+              <button type="submit" disabled={submitting} style={styles.formButton}>
+                {submitting ? 'Enviando...' : 'Cadastrar Artigo'}
+              </button>
+            </form>
           </div>
         )}
       </main>
