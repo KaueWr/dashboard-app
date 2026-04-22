@@ -298,7 +298,7 @@ function App() {
         "DATA DE CADASTRO": dataCadastro // Adicionado automaticamente
       };
 
-      const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+      await fetch(GOOGLE_APPS_SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors', // Necessário para Google Apps Script
         cache: 'no-cache',
