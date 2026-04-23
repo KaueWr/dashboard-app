@@ -13,12 +13,11 @@ const COLORS = {
 };
 
 // ⭐ ATENÇÃO: ESTES LINKS SERÃO SUBSTITUÍDOS POR VARIÁVEIS DE AMBIENTE NO VERCEl
-// NÃO COLOQUE INFORMAÇÕES SENSÍVEIS DIRETAMENTE AQUI
-const GOOGLE_SHEET_LINK = process.env.REACT_APP_GOOGLE_SHEET_LINK || 'https://docs.google.com/spreadsheets/d/1ihDtW4T7nELD0EVzbgQg6J3XPvB9uI5BAltPh26uytg/edit?usp=sharing';
-const GOOGLE_APPS_SCRIPT_URL = process.env.REACT_APP_GOOGLE_APPS_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbyn5xr7cPZm1D8cib7KKL6C4o3Gv1S8LeoC1z1IfHgXtkYK0u6FnK5dCrHHww9GWIbCbw/exec'; 
-
-// ⭐ SENHA SIMPLES PARA LOGIN (MUDE PARA ALGO MAIS SEGURO)
-const MASTER_PASSWORD = process.env.REACT_APP_MASTER_PASSWORD || 'suasenha123';
+// Agora o código só funciona se as variáveis estiverem configuradas no Vercel
+const GOOGLE_SHEET_LINK = process.env.REACT_APP_GOOGLE_SHEET_LINK;
+const GOOGLE_APPS_SCRIPT_URL = process.env.REACT_APP_GOOGLE_APPS_SCRIPT_URL; 
+// A senha também fica protegida
+const MASTER_PASSWORD = process.env.REACT_APP_MASTER_PASSWORD;
 
 function App() {
   const [data, setData] = useState(null);
