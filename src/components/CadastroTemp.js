@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-function Cadastro({ apiUrl, apiKey, onSuccess, colors }) {
+function CadastroTemp({ apiUrl, apiKey, onSuccess, colors }) {
   const [formArtigo, setFormArtigo] = useState({
     nomeProduto: '', malharia: '', representante: '', cliente: '',
     dataProjeto: '', dataEnvio: '', situacao: '', observacoes: ''
@@ -112,4 +112,4 @@ function Cadastro({ apiUrl, apiKey, onSuccess, colors }) {
   );
 }
 
-export default Cadastro;
+export default CadastroTemp;

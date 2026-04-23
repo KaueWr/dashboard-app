@@ -3,7 +3,7 @@ import Papa from 'papaparse';
 import Header from './components/Header.js';
 import Dashboard from './components/Dashboard.js';
 import TabelaItens from './components/TabelaItens.js';
-import Cadastro from './components/Cadastro.js';
+import Cadastro from './components/CadastroTemp.js';
 
 // ⭐ CONFIGURAÇÃO: Centralizada no App.js
 const GOOGLE_SHEET_LINK = process.env.REACT_APP_GOOGLE_SHEET_LINK || 'https://docs.google.com/spreadsheets/d/1ihDtW4T7nELD0EVzbgQg6J3XPvB9uI5BAltPh26uytg/edit?usp=sharing';
