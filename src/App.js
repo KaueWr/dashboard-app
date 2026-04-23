@@ -16,7 +16,7 @@ const COLORS = {
 const GOOGLE_SHEET_LINK = 'https://docs.google.com/spreadsheets/d/1urzSyHpTI9QvP3xG7k4OmocVEaTKcaDjuwat1xdN38Y/edit?usp=sharing';
 
 // ⭐ URL DO GOOGLE APPS SCRIPT AQUI (VOCÊ VAI COLOCAR DEPOIS DE PUBLICAR O SCRIPT)
-const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwf0lzYHdvyr6XVIuB8LE72Ckjc7IiSPZNbomCmFTs5OnKMJfmBnnlpTTen6sKu47z6zQ/exec'; 
+const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyn5xr7cPZm1D8cib7KKL6C4o3Gv1S8LeoC1z1IfHgXtkYK0u6FnK5dCrHHww9GWIbCbw/exec'; 
 
 function App() {
   const [data, setData] = useState(null);
