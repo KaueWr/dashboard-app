@@ -12,13 +12,9 @@ const COLORS = {
   'AG. RETORNO': '#eab308'
 };
 
-// ⭐ ATENÇÃO: ESTES LINKS SERÃO SUBSTITUÍDOS POR VARIÁVEIS DE AMBIENTE NO VERCEl
-// NÃO COLOQUE INFORMAÇÕES SENSÍVEIS DIRETAMENTE AQUI
-const GOOGLE_SHEET_LINK = process.env.REACT_APP_GOOGLE_SHEET_LINK; // Não será mais usado diretamente para leitura
-const GOOGLE_APPS_SCRIPT_URL = process.env.REACT_APP_GOOGLE_APPS_SCRIPT_URL; 
-
-// ⭐ SENHA SIMPLES PARA LOGIN (MUDE PARA ALGO MAIS SEGURO)
-const MASTER_PASSWORD = process.env.REACT_APP_MASTER_PASSWORD;
+// ⭐ LINKS ATUALIZADOS
+const GOOGLE_SHEET_LINK = 'https://docs.google.com/spreadsheets/d/1ihDtW4T7nELD0EVzbgQg6J3XPvB9uI5BAltPh26uytg/edit?usp=sharing';
+const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyn5xr7cPZm1D8cib7KKL6C4o3Gv1S8LeoC1z1IfHgXtkYK0u6FnK5dCrHHww9GWIbCbw/exec'; 
 
 function App() {
   const [data, setData] = useState(null);
@@ -27,11 +23,6 @@ function App() {
   const [lastSync, setLastSync] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'tabela', 'cadastro'
   
-  // Estado do Login
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [password, setPassword] = useState('');
-  const [loginError, setLoginError] = useState('');
-
   // Filtros
   const [filterName, setFilterName] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
@@ -50,20 +41,6 @@ function App() {
   const [formMessage, setFormMessage] = useState({ type: '', text: '' });
   const [submitting, setSubmitting] = useState(false);
 
-  // --- NOVA FUNÇÃO: Formatar data para exibição resumida (DD/MM/AAAA) ---
-  const formatarDataExibicao = (dataString) => {
-    if (!dataString || dataString.trim() === "" || dataString === "-") return "-";
-    try {
-      if (/^\d{2}\/\d{2}\/\d{4}$/.test(dataString)) return dataString;
-      const dataObj = new Date(dataString);
-      if (isNaN(dataObj.getTime())) return dataString; 
-      const dia = dataObj.getDate().toString().padStart(2, '0');
-      const mes = (dataObj.getMonth() + 1).toString().padStart(2, '0');
-      const ano = dataObj.getFullYear();
-      return `${dia}/${mes}/${ano}`;
-    } catch (e) { return dataString; }
-  };
-
   // Função para calcular dias passados
   const calcularDiasPassados = (dataString) => {
     try {
@@ -72,6 +49,8 @@ function App() {
       if (dataString.includes('/')) {
         const partes = dataString.split('/');
         dataObj = new Date(partes[2], partes[1] - 1, partes[0]);
+      } else if (dataString.includes('-')) {
+        dataObj = new Date(dataString);
       } else {
         dataObj = new Date(dataString);
       }
@@ -79,7 +58,7 @@ function App() {
       const hoje = new Date();
       hoje.setHours(0, 0, 0, 0);
       dataObj.setHours(0, 0, 0, 0);
-      const diferenca = hoje.getTime() - dataObj.getTime();
+      const diferenca = hoje - dataObj;
       return Math.floor(diferenca / (1000 * 60 * 60 * 24));
     } catch (e) { return 0; }
   };
@@ -89,31 +68,34 @@ function App() {
     try {
       if (!dataInicial || !dataFinal) return 0;
       let d1, d2;
-      const parseDate = (s) => s.includes('/') ? new Date(s.split('/')[2], s.split('/')[1] - 1, s.split('/')[0]) : new Date(s);
-      d1 = parseDate(dataInicial);
-      d2 = parseDate(dataFinal);
+      if (dataInicial.includes('/')) {
+        const p1 = dataInicial.split('/');
+        d1 = new Date(p1[2], p1[1] - 1, p1[0]);
+        const p2 = dataFinal.split('/');
+        d2 = new Date(p2[2], p2[1] - 1, p2[0]);
+      } else {
+        d1 = new Date(dataInicial);
+        d2 = new Date(dataFinal);
+      }
       if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return 0;
-      d1.setHours(0, 0, 0, 0);
-      d2.setHours(0, 0, 0, 0);
-      const diferenca = d2.getTime() - d1.getTime();
+      const diferenca = d2 - d1;
       return Math.floor(diferenca / (1000 * 60 * 60 * 24));
     } catch (e) { return 0; }
   };
 
   // Função para sincronizar dados
   const syncData = useCallback(async () => {
-    if (!isLoggedIn) return; 
-
     setLoading(true);
     setError(null);
     try {
-      // Extração do ID da planilha para leitura direta (mais estável contra erro 401)
       const match = GOOGLE_SHEET_LINK.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-      if (!match) throw new Error('Link da planilha inválido no Vercel.');
-      const csvUrl = `https://docs.google.com/spreadsheets/d/${match[1]}/export?format=csv&gid=0`;
+      if (!match) throw new Error('Link da planilha inválido');
+      const sheetId = match[1];
+      // Formato de exportação que funciona com compartilhamento "Qualquer pessoa com o link"
+      const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=DESENVOLVIMENTO`;
 
       const response = await fetch(csvUrl);
-      if (!response.ok) throw new Error('Erro ao ler planilha. Verifique o compartilhamento.');
+      if (!response.ok) throw new Error('Não conseguiu acessar a planilha. Verifique o compartilhamento.');
       const csvText = await response.text();
 
       Papa.parse(csvText, {
@@ -128,9 +110,10 @@ function App() {
             let diasAgRetorno = 0;
             let countAgRetorno = 0;
 
+            // ⭐ AJUSTE: Começa da linha 2 (índice 1)
             for (let i = 1; i < rows.length; i++) {
               const row = rows[i];
-              if (!row || row.length < 8) continue;
+              if (!row || row.length < 7) continue;
 
               const nomeProduto = String(row[0] || '').trim();
               const malharia = String(row[1] || '').trim();
@@ -141,7 +124,7 @@ function App() {
               const situacao = String(row[6] || '').trim();
               const observacoes = String(row[7] || '').trim();
 
-              if (!nomeProduto || !situacao) continue;
+              if (!nomeProduto || !situacao || nomeProduto === 'NOME DO PRODUTO') continue;
 
               items.push({
                 item: nomeProduto, malharia, representante, cliente, situacao,
@@ -153,9 +136,14 @@ function App() {
               if (dataProjeto && dataEnvio) {
                 const leadTime = calcularLeadTime(dataProjeto, dataEnvio);
                 let mes = '';
-                const d = dataEnvio.includes('/') ? new Date(dataEnvio.split('/')[2], dataEnvio.split('/')[1]-1, 1) : new Date(dataEnvio);
-                if (!isNaN(d.getTime())) {
-                  mes = `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+                if (dataEnvio.includes('/')) {
+                  const partes = dataEnvio.split('/');
+                  mes = `${partes[1]}/${partes[2]}`;
+                } else if (dataEnvio.includes('-')) {
+                  const partes = dataEnvio.split('-');
+                  mes = `${partes[1]}/${partes[0]}`;
+                }
+                if (mes) {
                   if (!leadTimesByMonth[mes]) leadTimesByMonth[mes] = { total: 0, count: 0 };
                   leadTimesByMonth[mes].total += leadTime;
                   leadTimesByMonth[mes].count += 1;
@@ -168,28 +156,31 @@ function App() {
               }
             }
 
+            if (items.length === 0) throw new Error('Nenhum item encontrado na planilha. Verifique se os dados começam na linha 2.');
+
+            const chartData = Object.entries(counts).map(([name, value]) => ({
+              name, value, fill: COLORS[name] || '#6b7280'
+            }));
+
+            const leadTimeChartData = Object.entries(leadTimesByMonth)
+              .map(([mes, dados]) => ({ mes, leadTime: Math.round(dados.total / dados.count) }))
+              .sort((a, b) => a.mes.localeCompare(b.mes));
+
             setData({
-              items, counts, totalItems: items.length,
-              chartData: Object.entries(counts).map(([name, value]) => ({ name, value, fill: COLORS[name] || '#6b7280' })),
-              leadTimeChartData: Object.entries(leadTimesByMonth).map(([mes, d]) => ({ mes, leadTime: Math.round(d.total / d.count) })).sort(),
-              mediaAgRetorno: countAgRetorno > 0 ? Math.round(diasAgRetorno / countAgRetorno) : 0,
+              items, counts, chartData, totalItems: items.length,
+              leadTimeChartData, mediaAgRetorno: countAgRetorno > 0 ? Math.round(diasAgRetorno / countAgRetorno) : 0,
               countAgRetorno
             });
-            setLastSync(new Date().toLocaleTimeString());
+            const now = new Date();
+            setLastSync(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`);
             setLoading(false);
           } catch (err) { setError(err.message); setLoading(false); }
         }
       });
     } catch (err) { setError(err.message); setLoading(false); }
-  }, [isLoggedIn]);
+  }, []);
 
-  useEffect(() => {
-    if (isLoggedIn) {
-      syncData();
-      const interval = setInterval(() => syncData(), 30 * 60 * 1000);
-      return () => clearInterval(interval);
-    }
-  }, [isLoggedIn, syncData]);
+  useEffect(() => { syncData(); }, [syncData]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -219,16 +210,6 @@ function App() {
       setTimeout(() => syncData(), 2000);
     } catch (err) { setFormMessage({ type: 'error', text: err.message }); }
     finally { setSubmitting(false); }
-  };
-
-  const handleLogin = (e) => {
-    e.preventDefault();
-    if (password === MASTER_PASSWORD) {
-      setIsLoggedIn(true);
-      setLoginError('');
-    } else {
-      setLoginError('Senha incorreta.');
-    }
   };
 
   const filteredItems = data?.items.filter(item => 
@@ -270,35 +251,8 @@ function App() {
     formTextarea: { width: '100%', padding: '0.75rem', borderRadius: '0.375rem', border: '1px solid #d1d5db', boxSizing: 'border-box', minHeight: '80px' },
     formButton: { backgroundColor: '#10b981', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '0.375rem', border: 'none', cursor: 'pointer', fontWeight: '600', transition: 'background-color 0.2s' },
     messageSuccess: { backgroundColor: '#d1fae5', color: '#065f46', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' },
-    messageErrorForm: { backgroundColor: '#fee2e2', color: '#b91c1c', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' },
-    loginContainer: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: '#f3f4f6' },
-    loginCard: { backgroundColor: 'white', padding: '2rem', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', textAlign: 'center', maxWidth: '400px', width: '100%' },
-    loginInput: { width: '100%', padding: '0.75rem', borderRadius: '0.375rem', border: '1px solid #d1d5db', marginBottom: '1rem', boxSizing: 'border-box' },
-    loginButton: { backgroundColor: '#3b82f6', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '0.375rem', border: 'none', cursor: 'pointer', fontWeight: '600', transition: 'background-color 0.2s', width: '100%' },
-    loginError: { color: '#ef4444', marginBottom: '1rem' }
+    messageErrorForm: { backgroundColor: '#fee2e2', color: '#b91c1c', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' }
   };
-
-  if (!isLoggedIn) {
-    return (
-      <div style={styles.loginContainer}>
-        <div style={styles.loginCard}>
-          <h2>Acesso Restrito</h2>
-          <form onSubmit={handleLogin}>
-            <input
-              type="password"
-              placeholder="Digite a senha"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={styles.loginInput}
-              required
-            />
-            {loginError && <div style={styles.loginError}>{loginError}</div>}
-            <button type="submit" style={styles.loginButton}>Entrar</button>
-          </form>
-        </div>
-      </div>
-    );
-  }
 
   if (loading && !data) return <div style={{...styles.container, display: 'flex', justifyContent: 'center', alignItems: 'center'}}><h2>Carregando Dashboard...</h2></div>;
 
@@ -327,19 +281,19 @@ function App() {
       <main style={styles.main}>
         {error && <div style={styles.messageError}>{error}</div>}
 
-        {activeTab === 'dashboard' && data && (
+        {activeTab === 'dashboard' && (
           <>
             <div style={styles.grid}>
               <div style={styles.statCard}>
-                <div style={styles.statValue}>{data.totalItems}</div>
+                <div style={styles.statValue}>{data?.totalItems || 0}</div>
                 <div style={styles.statLabel}>Total de Itens</div>
               </div>
               <div style={styles.statCard}>
-                <div style={styles.statValue}>{data.countAgRetorno}</div>
+                <div style={styles.statValue}>{data?.countAgRetorno || 0}</div>
                 <div style={styles.statLabel}>Aguardando Retorno</div>
               </div>
               <div style={styles.statCard}>
-                <div style={styles.statValue}>{data.mediaAgRetorno} dias</div>
+                <div style={styles.statValue}>{data?.mediaAgRetorno || 0} dias</div>
                 <div style={styles.statLabel}>Média de Espera (AG. RETORNO)</div>
               </div>
             </div>
@@ -350,8 +304,8 @@ function App() {
                 <div style={{ height: 300 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={data.chartData} cx="50%" cy="50%" outerRadius={80} fill="#8884d8" dataKey="value" label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                        {data.chartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
+                      <Pie data={data?.chartData} cx="50%" cy="50%" outerRadius={80} fill="#8884d8" dataKey="value" label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                        {data?.chartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
                       </Pie>
                       <Tooltip />
                     </PieChart>
@@ -362,7 +316,7 @@ function App() {
                 <h3>Lead Time Médio por Mês (Dias)</h3>
                 <div style={{ height: 300 }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data.leadTimeChartData}>
+                    <BarChart data={data?.leadTimeChartData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="mes" />
                       <YAxis />
@@ -376,7 +330,7 @@ function App() {
           </>
         )}
 
-        {activeTab === 'tabela' && data && (
+        {activeTab === 'tabela' && (
           <div style={styles.card}>
             <div style={styles.filterContainer}>
               <input type="text" placeholder="Filtrar por nome..." value={filterName} onChange={(e) => setFilterName(e.target.value)} style={styles.input} />
@@ -411,8 +365,8 @@ function App() {
                           {item.situacao}
                         </span>
                       </td>
-                      <td style={styles.td}>{formatarDataExibicao(item.dataInicial)}</td>
-                      <td style={styles.td}>{formatarDataExibicao(item.dataFinal)}</td>
+                      <td style={styles.td}>{item.dataInicial}</td>
+                      <td style={styles.td}>{item.dataFinal}</td>
                       <td style={styles.td}>{item.observacoes}</td>
                     </tr>
                   ))}
