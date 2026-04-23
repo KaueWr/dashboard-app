@@ -12,9 +12,13 @@ const COLORS = {
   'AG. RETORNO': '#eab308'
 };
 
-// ⭐ LINKS ATUALIZADOS
-const GOOGLE_SHEET_LINK = 'https://docs.google.com/spreadsheets/d/1ihDtW4T7nELD0EVzbgQg6J3XPvB9uI5BAltPh26uytg/edit?usp=sharing';
-const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyn5xr7cPZm1D8cib7KKL6C4o3Gv1S8LeoC1z1IfHgXtkYK0u6FnK5dCrHHww9GWIbCbw/exec'; 
+// ⭐ ATENÇÃO: ESTES LINKS SERÃO SUBSTITUÍDOS POR VARIÁVEIS DE AMBIENTE NO VERCEl
+// NÃO COLOQUE INFORMAÇÕES SENSÍVEIS DIRETAMENTE AQUI
+const GOOGLE_SHEET_LINK = process.env.REACT_APP_GOOGLE_SHEET_LINK || 'https://docs.google.com/spreadsheets/d/1ihDtW4T7nELD0EVzbgQg6J3XPvB9uI5BAltPh26uytg/edit?usp=sharing';
+const GOOGLE_APPS_SCRIPT_URL = process.env.REACT_APP_GOOGLE_APPS_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbyn5xr7cPZm1D8cib7KKL6C4o3Gv1S8LeoC1z1IfHgXtkYK0u6FnK5dCrHHww9GWIbCbw/exec'; 
+
+// ⭐ SENHA SIMPLES PARA LOGIN (MUDE PARA ALGO MAIS SEGURO)
+const MASTER_PASSWORD = process.env.REACT_APP_MASTER_PASSWORD || 'suasenha123';
 
 function App() {
   const [data, setData] = useState(null);
@@ -23,6 +27,11 @@ function App() {
   const [lastSync, setLastSync] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'tabela', 'cadastro'
   
+  // Estado do Login
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+
   // Filtros
   const [filterName, setFilterName] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
@@ -85,6 +94,8 @@ function App() {
 
   // Função para sincronizar dados
   const syncData = useCallback(async () => {
+    if (!isLoggedIn) return; // Não sincroniza se não estiver logado
+
     setLoading(true);
     setError(null);
     try {
@@ -178,15 +189,26 @@ function App() {
         }
       });
     } catch (err) { setError(err.message); setLoading(false); }
-  }, []);
+  }, [isLoggedIn]); // Depende do estado de login
 
-  useEffect(() => { syncData(); }, [syncData]);
+  useEffect(() => {
+    if (isLoggedIn) {
+      syncData();
+      const interval = setInterval(() => {
+        syncData();
+      }, 30 * 60 * 1000);
+      return () => clearInterval(interval);
+    }
+  }, [isLoggedIn, syncData]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setFormMessage({ type: '', text: '' });
     try {
+      if (!GOOGLE_APPS_SCRIPT_URL || GOOGLE_APPS_SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE') {
+        throw new Error('Por favor, configure um URL para o Google Apps Script.');
+      }
       const now = new Date();
       const dataCadastro = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
       const payload = {
@@ -210,6 +232,16 @@ function App() {
       setTimeout(() => syncData(), 2000);
     } catch (err) { setFormMessage({ type: 'error', text: err.message }); }
     finally { setSubmitting(false); }
+  };
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    if (password === MASTER_PASSWORD) {
+      setIsLoggedIn(true);
+      setLoginError('');
+    } else {
+      setLoginError('Senha incorreta. Tente novamente.');
+    }
   };
 
   const filteredItems = data?.items.filter(item => 
@@ -251,8 +283,35 @@ function App() {
     formTextarea: { width: '100%', padding: '0.75rem', borderRadius: '0.375rem', border: '1px solid #d1d5db', boxSizing: 'border-box', minHeight: '80px' },
     formButton: { backgroundColor: '#10b981', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '0.375rem', border: 'none', cursor: 'pointer', fontWeight: '600', transition: 'background-color 0.2s' },
     messageSuccess: { backgroundColor: '#d1fae5', color: '#065f46', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' },
-    messageErrorForm: { backgroundColor: '#fee2e2', color: '#b91c1c', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' }
+    messageErrorForm: { backgroundColor: '#fee2e2', color: '#b91c1c', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' },
+    loginContainer: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: '#f3f4f6' },
+    loginCard: { backgroundColor: 'white', padding: '2rem', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', textAlign: 'center', maxWidth: '400px', width: '100%' },
+    loginInput: { width: '100%', padding: '0.75rem', borderRadius: '0.375rem', border: '1px solid #d1d5db', marginBottom: '1rem', boxSizing: 'border-box' },
+    loginButton: { backgroundColor: '#3b82f6', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '0.375rem', border: 'none', cursor: 'pointer', fontWeight: '600', transition: 'background-color 0.2s', width: '100%' },
+    loginError: { color: '#ef4444', marginBottom: '1rem' }
   };
+
+  if (!isLoggedIn) {
+    return (
+      <div style={styles.loginContainer}>
+        <div style={styles.loginCard}>
+          <h2>Acesso Restrito</h2>
+          <form onSubmit={handleLogin}>
+            <input
+              type="password"
+              placeholder="Digite a senha"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={styles.loginInput}
+              required
+            />
+            {loginError && <div style={styles.loginError}>{loginError}</div>}
+            <button type="submit" style={styles.loginButton}>Entrar</button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   if (loading && !data) return <div style={{...styles.container, display: 'flex', justifyContent: 'center', alignItems: 'center'}}><h2>Carregando Dashboard...</h2></div>;
 
@@ -274,7 +333,7 @@ function App() {
         <div style={styles.tabsContainer}>
           <button onClick={() => setActiveTab('dashboard')} style={{...styles.tab, ...(activeTab === 'dashboard' ? styles.tabActive : {})}}>Painel</button>
           <button onClick={() => setActiveTab('tabela')} style={{...styles.tab, ...(activeTab === 'tabela' ? styles.tabActive : {})}}>Lista de Itens</button>
-          <button onClick={() => setActiveTab('cadastro')} style={{...styles.tab, ...(activeTab === 'cadastro' ? styles.tabActive : {})}}>Cadastro</button>
+          <button onClick={() => setActiveTab('cadastro')} style={{...styles.tab, ...(activeTab === 'cadastro' ? styles.tabActive : {})}}>Cadastro de Artigo</button>
         </div>
       </header>
 
