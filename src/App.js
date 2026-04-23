@@ -12,10 +12,8 @@ const COLORS = {
   'AG. RETORNO': '#eab308'
 };
 
-// ⭐ LINK DO GOOGLE SHEETS INTEGRADO AQUI
+// ⭐ NOVOS LINKS ATUALIZADOS AQUI
 const GOOGLE_SHEET_LINK = 'https://docs.google.com/spreadsheets/d/1ihDtW4T7nELD0EVzbgQg6J3XPvB9uI5BAltPh26uytg/edit?usp=sharing';
-
-// ⭐ URL DO GOOGLE APPS SCRIPT AQUI (VOCÊ VAI COLOCAR DEPOIS DE PUBLICAR O SCRIPT)
 const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyn5xr7cPZm1D8cib7KKL6C4o3Gv1S8LeoC1z1IfHgXtkYK0u6FnK5dCrHHww9GWIbCbw/exec'; 
 
 function App() {
@@ -31,12 +29,12 @@ function App() {
 
   // Estado do Formulário de Cadastro
   const [formArtigo, setFormArtigo] = useState({
-    nomeProduto: '', // Corrigido para nomeProduto
-    malharia: '',    // Novo campo
-    representante: '', // Novo campo
+    nomeProduto: '',
+    malharia: '',
+    representante: '',
     cliente: '',
-    dataProjeto: '', // Corrigido para dataProjeto
-    dataEnvio: '',   // Corrigido para dataEnvio
+    dataProjeto: '',
+    dataEnvio: '',
     situacao: '',
     observacoes: ''
   });
@@ -116,18 +114,19 @@ function App() {
       if (!match) throw new Error('Link da planilha inválido');
       
       const sheetId = match[1];
+      // ⭐ IMPORTANTE: Certifique-se de que a planilha está publicada na web como CSV
       const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0`;
 
       const response = await fetch(csvUrl);
 
       if (!response.ok) {
-        throw new Error(`Erro ${response.status}: Não conseguiu acessar a planilha`);
+        throw new Error(`Erro ${response.status}: Não conseguiu acessar a planilha. Verifique se ela está publicada na web.`);
       }
 
       const csvText = await response.text();
 
       if (csvText.includes('<!DOCTYPE html>') || csvText.includes('Page Not Found')) {
-        throw new Error('Planilha não encontrada. Verifique se está compartilhada publicamente.');
+        throw new Error('Planilha não encontrada ou não publicada. Vá em Arquivo > Compartilhar > Publicar na Web e selecione CSV.');
       }
 
       Papa.parse(csvText, {
@@ -142,37 +141,36 @@ function App() {
             let diasAgRetorno = 0;
             let countAgRetorno = 0;
 
-            for (let i = 2; i < rows.length; i++) { // Começa da linha 3 da planilha (índice 2)
+            // Começa da linha 2 (índice 1) se a primeira linha for o cabeçalho
+            // Se tiver 2 linhas de cabeçalho, comece do índice 2
+            for (let i = 1; i < rows.length; i++) { 
               const row = rows[i];
-              // Ajustado para 8 colunas, considerando a nova estrutura do Apps Script
-              if (!row || row.length < 8) continue;
+              if (!row || row.length < 7) continue;
 
-              // ⭐ CORREÇÃO AQUI: Ajuste dos índices das colunas conforme a descrição do usuário
-              const nomeProduto = String(row[0] || '').trim(); // Coluna A
-              const malharia = String(row[1] || '').trim();    // Coluna B
-              const representante = String(row[2] || '').trim(); // Coluna C
-              const cliente = String(row[3] || '').trim(); // Coluna D
-              const dataProjeto = String(row[4] || '').trim(); // Coluna E
-              const dataEnvio = String(row[5] || '').trim();   // Coluna F
-              const situacao = String(row[6] || '').trim(); // Coluna G (Assumido)
-              const observacoes = String(row[7] || '').trim(); // Coluna H
+              const nomeProduto = String(row[0] || '').trim(); // A
+              const malharia = String(row[1] || '').trim();    // B
+              const representante = String(row[2] || '').trim(); // C
+              const cliente = String(row[3] || '').trim(); // D
+              const dataProjeto = String(row[4] || '').trim(); // E
+              const dataEnvio = String(row[5] || '').trim();   // F
+              const situacao = String(row[6] || '').trim(); // G
+              const observacoes = String(row[7] || '').trim(); // H
 
               if (!nomeProduto || !situacao) continue;
 
               items.push({
-                item: nomeProduto, // Usando nomeProduto como item
-                malharia: malharia,
-                representante: representante,
-                cliente: cliente,
-                situacao: situacao,
-                dataInicial: dataProjeto, // Mapeando para dataInicial
-                dataFinal: dataEnvio,     // Mapeando para dataFinal
-                observacoes: observacoes
+                item: nomeProduto,
+                malharia,
+                representante,
+                cliente,
+                situacao,
+                dataInicial: dataProjeto,
+                dataFinal: dataEnvio,
+                observacoes
               });
 
               counts[situacao] = (counts[situacao] || 0) + 1;
 
-              // Usando dataProjeto e dataEnvio para calcular lead time
               if (dataProjeto && dataEnvio) {
                 const leadTime = calcularLeadTime(dataProjeto, dataEnvio);
                 try {
@@ -195,7 +193,6 @@ function App() {
                 } catch (e) {}
               }
 
-              // Usando dataEnvio para AG. RETORNO
               if (situacao === 'AG. RETORNO' && dataEnvio) {
                 const dias = calcularDiasPassados(dataEnvio);
                 diasAgRetorno += dias;
@@ -203,14 +200,10 @@ function App() {
               }
             }
 
-            if (items.length === 0) {
-              throw new Error('Nenhum item encontrado na planilha');
-            }
-
             const chartData = Object.entries(counts).map(([name, value]) => ({
               name,
               value,
-              fill: COLORS[name] || '#6b7280' // Garante que as cores sejam as definidas
+              fill: COLORS[name] || '#6b7280'
             }));
 
             const leadTimeChartData = Object.entries(leadTimesByMonth)
@@ -232,14 +225,13 @@ function App() {
               counts,
               chartData,
               totalItems: items.length,
-              leadTimeChartData: leadTimeChartData,
-              mediaAgRetorno: mediaAgRetorno,
-              countAgRetorno: countAgRetorno
+              leadTimeChartData,
+              mediaAgRetorno,
+              countAgRetorno
             });
 
             const now = new Date();
-            const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-            setLastSync(timeStr);
+            setLastSync(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`);
             setLoading(false);
           } catch (err) {
             setError(`Erro ao processar: ${err.message}`);
@@ -261,32 +253,17 @@ function App() {
     syncData();
   }, [syncData]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      syncData();
-    }, 30 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [syncData]);
-
   // Lógica de envio do formulário
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setFormMessage({ type: '', text: '' });
 
-    if (!GOOGLE_APPS_SCRIPT_URL || GOOGLE_APPS_SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE') {
-      setFormMessage({ type: 'error', text: 'Por favor, configure a URL do Google Apps Script.' });
-      setSubmitting(false);
-      return;
-    }
-
     try {
       const now = new Date();
       const dataCadastro = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
 
       const payload = {
-        // ⭐ ATENÇÃO: Os nomes das propriedades aqui devem corresponder aos cabeçalhos da sua planilha
-        // e à ordem esperada pelo Google Apps Script (google_apps_script.js)
         "NOME DO PRODUTO": formArtigo.nomeProduto,
         "MALHARIA": formArtigo.malharia,
         "REPRESENTANTE": formArtigo.representante,
@@ -295,31 +272,23 @@ function App() {
         "DATA DE ENVIO": formArtigo.dataEnvio,
         "SITUAÇÃO": formArtigo.situacao,
         "OBSERVAÇÃO": formArtigo.observacoes,
-        "DATA DE CADASTRO": dataCadastro // Adicionado automaticamente
+        "DATA DE CADASTRO": dataCadastro
       };
 
       await fetch(GOOGLE_APPS_SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors', // Necessário para Google Apps Script
+        mode: 'no-cors',
         cache: 'no-cache',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
-      setFormMessage({ type: 'success', text: 'Artigo cadastrado com sucesso! Sincronize o dashboard para ver as mudanças.' });
+      setFormMessage({ type: 'success', text: 'Artigo cadastrado com sucesso!' });
       setFormArtigo({
-        nomeProduto: '',
-        malharia: '',
-        representante: '',
-        cliente: '',
-        dataProjeto: '',
-        dataEnvio: '',
-        situacao: '',
-        observacoes: ''
+        nomeProduto: '', malharia: '', representante: '', cliente: '',
+        dataProjeto: '', dataEnvio: '', situacao: '', observacoes: ''
       });
-      syncData(); // Sincroniza o dashboard após o cadastro
+      setTimeout(() => syncData(), 2000); // Sincroniza após 2 segundos
 
     } catch (err) {
       setFormMessage({ type: 'error', text: `Erro ao cadastrar: ${err.message}` });
@@ -368,7 +337,7 @@ function App() {
     formInput: { width: '100%', padding: '0.75rem', borderRadius: '0.375rem', border: '1px solid #d1d5db', boxSizing: 'border-box' },
     formSelect: { width: '100%', padding: '0.75rem', borderRadius: '0.375rem', border: '1px solid #d1d5db', boxSizing: 'border-box' },
     formTextarea: { width: '100%', padding: '0.75rem', borderRadius: '0.375rem', border: '1px solid #d1d5db', boxSizing: 'border-box', minHeight: '80px' },
-    formButton: { backgroundColor: '#10b981', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '0.375rem', border: 'none', cursor: 'pointer', fontWeight: '600', transition: 'background-color 0.2s', '&:hover': { backgroundColor: '#059669' } },
+    formButton: { backgroundColor: '#10b981', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '0.375rem', border: 'none', cursor: 'pointer', fontWeight: '600', transition: 'background-color 0.2s' },
     messageSuccess: { backgroundColor: '#d1fae5', color: '#065f46', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' },
     messageErrorForm: { backgroundColor: '#fee2e2', color: '#b91c1c', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem' }
   };
