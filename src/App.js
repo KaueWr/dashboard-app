@@ -5,6 +5,13 @@ import {
   CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
 
+// ⭐ CONFIGURAÇÃO: Use variáveis de ambiente para URLs e API Key
+// Certifique-se de configurar estas variáveis no seu ambiente de desenvolvimento/produção.
+// Ex: REACT_APP_GOOGLE_SHEET_LINK, REACT_APP_GOOGLE_APPS_SCRIPT_URL, REACT_APP_API_KEY
+const GOOGLE_SHEET_LINK = process.env.REACT_APP_GOOGLE_SHEET_LINK || 'https://docs.google.com/spreadsheets/d/1ihDtW4T7nELD0EVzbgQg6J3XPvB9uI5BAltPh26uytg/edit?usp=sharing';
+const GOOGLE_APPS_SCRIPT_URL = process.env.REACT_APP_GOOGLE_APPS_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbyn5xr7cPZm1D8cib7KKL6C4o3Gv1S8LeoC1z1IfHgXtkYK0u6FnK5dCrHHww9GWIbCbw/exec';
+const API_KEY = process.env.REACT_APP_API_KEY || 'SUA_CHAVE_API_AQUI'; // Deve ser a mesma chave configurada no Google Apps Script
+
 const COLORS = {
   'APROVADO': '#10b981',
   'REPROVADO': '#ef4444',
@@ -12,75 +19,56 @@ const COLORS = {
   'AG. RETORNO': '#eab308'
 };
 
-// ⭐ LINKS ATUALIZADOS
-const GOOGLE_SHEET_LINK = 'https://docs.google.com/spreadsheets/d/1ihDtW4T7nELD0EVzbgQg6J3XPvB9uI5BAltPh26uytg/edit?usp=sharing';
-const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyn5xr7cPZm1D8cib7KKL6C4o3Gv1S8LeoC1z1IfHgXtkYK0u6FnK5dCrHHww9GWIbCbw/exec'; 
+// Função auxiliar para parsear datas em diferentes formatos para um objeto Date
+const parseDate = (dateString) => {
+  if (!dateString) return null;
+  let dateObj = null;
+  if (dateString.includes('/')) {
+    const [day, month, year] = dateString.split('/').map(Number);
+    dateObj = new Date(year, month - 1, day);
+  } else if (dateString.includes('-')) {
+    dateObj = new Date(dateString); // Assume YYYY-MM-DD
+  } else {
+    dateObj = new Date(dateString);
+  }
+  return isNaN(dateObj.getTime()) ? null : dateObj;
+};
 
 function App() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastSync, setLastSync] = useState(null);
-  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'tabela', 'cadastro'
+  const [activeTab, setActiveTab] = useState('dashboard');
   
-  // Filtros
   const [filterName, setFilterName] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
 
-  // Estado do Formulário de Cadastro
   const [formArtigo, setFormArtigo] = useState({
-    nomeProduto: '',
-    malharia: '',
-    representante: '',
-    cliente: '',
-    dataProjeto: '',
-    dataEnvio: '',
-    situacao: '',
-    observacoes: ''
+    nomeProduto: '', malharia: '', representante: '', cliente: '',
+    dataProjeto: '', dataEnvio: '', situacao: '', observacoes: ''
   });
   const [formMessage, setFormMessage] = useState({ type: '', text: '' });
   const [submitting, setSubmitting] = useState(false);
 
   // Função para calcular dias passados
   const calcularDiasPassados = (dataString) => {
-    try {
-      if (!dataString) return 0;
-      let dataObj;
-      if (dataString.includes('/')) {
-        const partes = dataString.split('/');
-        dataObj = new Date(partes[2], partes[1] - 1, partes[0]);
-      } else if (dataString.includes('-')) {
-        dataObj = new Date(dataString);
-      } else {
-        dataObj = new Date(dataString);
-      }
-      if (isNaN(dataObj.getTime())) return 0;
-      const hoje = new Date();
-      hoje.setHours(0, 0, 0, 0);
-      dataObj.setHours(0, 0, 0, 0);
-      const diferenca = hoje - dataObj;
-      return Math.floor(diferenca / (1000 * 60 * 60 * 24));
-    } catch (e) { return 0; }
+    const dataObj = parseDate(dataString);
+    if (!dataObj) return 0;
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    dataObj.setHours(0, 0, 0, 0);
+    const diferenca = hoje - dataObj;
+    return Math.floor(diferenca / (1000 * 60 * 60 * 24));
   };
 
   // Função para calcular lead time
-  const calcularLeadTime = (dataInicial, dataFinal) => {
-    try {
-      if (!dataInicial || !dataFinal) return 0;
-      let d1, d2;
-      if (dataInicial.includes('/')) {
-        const p1 = dataInicial.split('/');
-        d1 = new Date(p1[2], p1[1] - 1, p1[0]);
-        const p2 = dataFinal.split('/');
-        d2 = new Date(p2[2], p2[1] - 1, p2[0]);
-      } else {
-        d1 = new Date(dataInicial);
-        d2 = new Date(dataFinal);
-      }
-      if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return 0;
-      const diferenca = d2 - d1;
-      return Math.floor(diferenca / (1000 * 60 * 60 * 24));
-    } catch (e) { return 0; }
+  const calcularLeadTime = (dataInicialString, dataFinalString) => {
+    const d1 = parseDate(dataInicialString);
+    const d2 = parseDate(dataFinalString);
+    if (!d1 || !d2) return 0;
+    const diferenca = d2 - d1;
+    return Math.floor(diferenca / (1000 * 60 * 60 * 24));
   };
 
   // Função para sincronizar dados
@@ -91,11 +79,11 @@ function App() {
       const match = GOOGLE_SHEET_LINK.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
       if (!match) throw new Error('Link da planilha inválido');
       const sheetId = match[1];
-      // Formato de exportação que funciona com compartilhamento "Qualquer pessoa com o link"
-      const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=DESENVOLVIMENTO`;
+      // Adiciona a chave de API à URL
+      const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=DESENVOLVIMENTO&apiKey=${API_KEY}`;
 
       const response = await fetch(csvUrl);
-      if (!response.ok) throw new Error('Não conseguiu acessar a planilha. Verifique o compartilhamento.');
+      if (!response.ok) throw new Error('Não conseguiu acessar a planilha. Verifique o compartilhamento e a chave de API.');
       const csvText = await response.text();
 
       Papa.parse(csvText, {
@@ -110,10 +98,10 @@ function App() {
             let diasAgRetorno = 0;
             let countAgRetorno = 0;
 
-            // ⭐ AJUSTE: Começa da linha 2 (índice 1)
+            // Começa da linha 2 (índice 1) e ignora linhas vazias ou incompletas
             for (let i = 1; i < rows.length; i++) {
               const row = rows[i];
-              if (!row || row.length < 7) continue;
+              if (!row || row.length < 7 || !row[0] || !row[6] || String(row[0]).trim() === 'NOME DO PRODUTO') continue;
 
               const nomeProduto = String(row[0] || '').trim();
               const malharia = String(row[1] || '').trim();
@@ -124,8 +112,6 @@ function App() {
               const situacao = String(row[6] || '').trim();
               const observacoes = String(row[7] || '').trim();
 
-              if (!nomeProduto || !situacao || nomeProduto === 'NOME DO PRODUTO') continue;
-
               items.push({
                 item: nomeProduto, malharia, representante, cliente, situacao,
                 dataInicial: dataProjeto, dataFinal: dataEnvio, observacoes
@@ -135,15 +121,9 @@ function App() {
 
               if (dataProjeto && dataEnvio) {
                 const leadTime = calcularLeadTime(dataProjeto, dataEnvio);
-                let mes = '';
-                if (dataEnvio.includes('/')) {
-                  const partes = dataEnvio.split('/');
-                  mes = `${partes[1]}/${partes[2]}`;
-                } else if (dataEnvio.includes('-')) {
-                  const partes = dataEnvio.split('-');
-                  mes = `${partes[1]}/${partes[0]}`;
-                }
-                if (mes) {
+                const dataEnvioObj = parseDate(dataEnvio);
+                if (dataEnvioObj) {
+                  const mes = `${(dataEnvioObj.getMonth() + 1).toString().padStart(2, '0')}/${dataEnvioObj.getFullYear()}`;
                   if (!leadTimesByMonth[mes]) leadTimesByMonth[mes] = { total: 0, count: 0 };
                   leadTimesByMonth[mes].total += leadTime;
                   leadTimesByMonth[mes].count += 1;
@@ -164,7 +144,11 @@ function App() {
 
             const leadTimeChartData = Object.entries(leadTimesByMonth)
               .map(([mes, dados]) => ({ mes, leadTime: Math.round(dados.total / dados.count) }))
-              .sort((a, b) => a.mes.localeCompare(b.mes));
+              .sort((a, b) => {
+                const [m1, y1] = b.mes.split('/').map(Number);
+                const [m2, y2] = a.mes.split('/').map(Number);
+                return (y1 * 12 + m1) - (y2 * 12 + m2); // Ordena por ano e mês
+              });
 
             setData({
               items, counts, chartData, totalItems: items.length,
@@ -187,6 +171,11 @@ function App() {
     setSubmitting(true);
     setFormMessage({ type: '', text: '' });
     try {
+      // Validação básica do formulário antes de enviar
+      if (!formArtigo.nomeProduto || !formArtigo.cliente || !formArtigo.situacao) {
+        throw new Error('Por favor, preencha os campos obrigatórios: Nome do Produto, Cliente e Situação.');
+      }
+
       const now = new Date();
       const dataCadastro = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
       const payload = {
@@ -200,14 +189,19 @@ function App() {
         "OBSERVAÇÃO": formArtigo.observacoes,
         "DATA DE CADASTRO": dataCadastro
       };
-      await fetch(GOOGLE_APPS_SCRIPT_URL, {
+      
+      // Adiciona a chave de API à URL do Apps Script
+      const appsScriptUrlWithKey = `${GOOGLE_APPS_SCRIPT_URL}?apiKey=${API_KEY}`;
+
+      const response = await fetch(appsScriptUrlWithKey, {
         method: 'POST', mode: 'no-cors', cache: 'no-cache',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+      // Como mode: 'no-cors', a resposta não pode ser lida diretamente. Assume sucesso se não houver erro de rede.
       setFormMessage({ type: 'success', text: 'Artigo cadastrado com sucesso!' });
       setFormArtigo({ nomeProduto: '', malharia: '', representante: '', cliente: '', dataProjeto: '', dataEnvio: '', situacao: '', observacoes: '' });
-      setTimeout(() => syncData(), 2000);
+      setTimeout(() => syncData(), 2000); // Sincroniza os dados após o cadastro
     } catch (err) { setFormMessage({ type: 'error', text: err.message }); }
     finally { setSubmitting(false); }
   };
@@ -216,6 +210,7 @@ function App() {
     item.item.toLowerCase().includes(filterName.toLowerCase()) && (filterStatus === '' || item.situacao === filterStatus)
   ) || [];
 
+  // Estilos permanecem inline para manter a essência do código original, mas podem ser refatorados.
   const styles = {
     container: { fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif', backgroundColor: '#f3f4f6', minHeight: '100vh' },
     header: { backgroundColor: '#1f2937', color: 'white', padding: '1rem 2rem', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
