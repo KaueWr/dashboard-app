@@ -13,10 +13,11 @@ const COLORS = {
 };
 
 // ⭐ ATENÇÃO: ESTES LINKS SERÃO SUBSTITUÍDOS POR VARIÁVEIS DE AMBIENTE NO VERCEl
-// Agora o código só funciona se as variáveis estiverem configuradas no Vercel
-const GOOGLE_SHEET_LINK = process.env.REACT_APP_GOOGLE_SHEET_LINK;
+// NÃO COLOQUE INFORMAÇÕES SENSÍVEIS DIRETAMENTE AQUI
+const GOOGLE_SHEET_LINK = process.env.REACT_APP_GOOGLE_SHEET_LINK; // Não será mais usado diretamente para leitura
 const GOOGLE_APPS_SCRIPT_URL = process.env.REACT_APP_GOOGLE_APPS_SCRIPT_URL; 
-// A senha também fica protegida
+
+// ⭐ SENHA SIMPLES PARA LOGIN (MUDE PARA ALGO MAIS SEGURO)
 const MASTER_PASSWORD = process.env.REACT_APP_MASTER_PASSWORD;
 
 function App() {
@@ -86,6 +87,8 @@ function App() {
         d2 = new Date(dataFinal);
       }
       if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return 0;
+      d1.setHours(0, 0, 0, 0);
+      d2.setHours(0, 0, 0, 0);
       const diferenca = d2 - d1;
       return Math.floor(diferenca / (1000 * 60 * 60 * 24));
     } catch (e) { return 0; }
@@ -98,15 +101,16 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      const match = GOOGLE_SHEET_LINK.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-      if (!match) throw new Error('Link da planilha inválido');
-      const sheetId = match[1];
-      // Formato de exportação que funciona com compartilhamento "Qualquer pessoa com o link"
-      const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=DESENVOLVIMENTO`;
+      // Usando o Google Apps Script como proxy para ler os dados da planilha
+      const csvUrl = GOOGLE_APPS_SCRIPT_URL; // O Apps Script já retorna o CSV
 
       const response = await fetch(csvUrl);
-      if (!response.ok) throw new Error('Não conseguiu acessar a planilha. Verifique o compartilhamento.');
+      if (!response.ok) throw new Error('Não conseguiu acessar o Apps Script. Verifique a URL e as permissões.');
       const csvText = await response.text();
+
+      if (csvText.includes('<!DOCTYPE html>') || csvText.includes('Page Not Found') || csvText.includes('error')) {
+        throw new Error('Erro ao ler dados do Apps Script. Verifique as permissões ou o log do script.');
+      }
 
       Papa.parse(csvText, {
         header: false,
@@ -123,21 +127,22 @@ function App() {
             // ⭐ AJUSTE: Começa da linha 2 (índice 1)
             for (let i = 1; i < rows.length; i++) {
               const row = rows[i];
-              if (!row || row.length < 7) continue;
+              if (!row || row.length < 8) continue;
 
-              const nomeProduto = String(row[0] || '').trim();
-              const malharia = String(row[1] || '').trim();
-              const representante = String(row[2] || '').trim();
-              const cliente = String(row[3] || '').trim();
-              const dataProjeto = String(row[4] || '').trim();
-              const dataEnvio = String(row[5] || '').trim();
-              const situacao = String(row[6] || '').trim();
-              const observacoes = String(row[7] || '').trim();
+              const nomeProduto = String(row[0] || '').trim(); // Coluna A
+              const malharia = String(row[1] || '').trim();    // Coluna B
+              const representante = String(row[2] || '').trim(); // Coluna C
+              const cliente = String(row[3] || '').trim(); // Coluna D
+              const dataProjeto = String(row[4] || '').trim(); // Coluna E
+              const dataEnvio = String(row[5] || '').trim();   // Coluna F
+              const situacao = String(row[6] || '').trim(); // Coluna G (Assumido)
+              const observacoes = String(row[7] || '').trim(); // Coluna H
 
-              if (!nomeProduto || !situacao || nomeProduto === 'NOME DO PRODUTO') continue;
+              if (!nomeProduto || !situacao) continue;
 
               items.push({
-                item: nomeProduto, malharia, representante, cliente, situacao,
+                item: nomeProduto,
+                malharia, representante, cliente, situacao,
                 dataInicial: dataProjeto, dataFinal: dataEnvio, observacoes
               });
 
@@ -173,8 +178,15 @@ function App() {
             }));
 
             const leadTimeChartData = Object.entries(leadTimesByMonth)
-              .map(([mes, dados]) => ({ mes, leadTime: Math.round(dados.total / dados.count) }))
-              .sort((a, b) => a.mes.localeCompare(b.mes));
+              .map(([mes, dados]) => ({
+                mes, leadTime: Math.round(dados.total / dados.count)
+              }))
+              .sort((a, b) => {
+                const pA = a.mes.split('/');
+                const pB = b.mes.split('/');
+                if (pA[1] !== pB[1]) return pA[1] - pB[1];
+                return pA[0] - pB[0];
+              });
 
             setData({
               items, counts, chartData, totalItems: items.length,
@@ -205,8 +217,8 @@ function App() {
     setSubmitting(true);
     setFormMessage({ type: '', text: '' });
     try {
-      if (!GOOGLE_APPS_SCRIPT_URL || GOOGLE_APPS_SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE') {
-        throw new Error('Por favor, configure um URL para o Google Apps Script.');
+      if (!GOOGLE_APPS_SCRIPT_URL) {
+        throw new Error('Por favor, configure a variável de ambiente REACT_APP_GOOGLE_APPS_SCRIPT_URL no Vercel.');
       }
       const now = new Date();
       const dataCadastro = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
@@ -466,7 +478,7 @@ function App() {
               </div>
               <div style={styles.formGroup}>
                 <label htmlFor="situacao" style={styles.formLabel}>Situação:</label>
-                <select id="situacao" name="situacao" value={formArtigo.situacao} onChange={(e) => setFormArtigo({...formArtigo, situacao: e.target.value})} style={styles.formSelect} required>
+                <select id="situacao" name="situacao" value={formArtigo.situacao} onChange={(e) => setFormArtigo({...formArtigo, situacao: e.target.value})} style={styles.formInput} required>
                   <option value="">Selecione uma situação</option>
                   {Object.keys(COLORS).map(status => <option key={status} value={status}>{status}</option>)}
                 </select>
