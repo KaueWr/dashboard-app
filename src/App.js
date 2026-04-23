@@ -10,7 +10,7 @@ import {
 // Ex: REACT_APP_GOOGLE_SHEET_LINK, REACT_APP_GOOGLE_APPS_SCRIPT_URL, REACT_APP_API_KEY
 const GOOGLE_SHEET_LINK = process.env.REACT_APP_GOOGLE_SHEET_LINK || 'https://docs.google.com/spreadsheets/d/1ihDtW4T7nELD0EVzbgQg6J3XPvB9uI5BAltPh26uytg/edit?usp=sharing';
 const GOOGLE_APPS_SCRIPT_URL = process.env.REACT_APP_GOOGLE_APPS_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbyn5xr7cPZm1D8cib7KKL6C4o3Gv1S8LeoC1z1IfHgXtkYK0u6FnK5dCrHHww9GWIbCbw/exec';
-const API_KEY = process.env.REACT_APP_API_KEY || 'SUA_CHAVE_API_AQUI'; // Deve ser a mesma chave configurada no Google Apps Script
+const API_KEY = process.env.REACT_APP_API_KEY || 'kaue1012'; // Deve ser a mesma chave configurada no Google Apps Script
 
 const COLORS = {
   'APROVADO': '#10b981',
