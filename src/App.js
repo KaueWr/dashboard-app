@@ -12,12 +12,9 @@ const COLORS = {
   'AG. RETORNO': '#eab308'
 };
 
-// ⭐ ATENÇÃO: ESTES LINKS SERÃO SUBSTITUÍDOS POR VARIÁVEIS DE AMBIENTE NO VERCEl
-// NÃO COLOQUE INFORMAÇÕES SENSÍVEIS DIRETAMENTE AQUI
-const GOOGLE_SHEET_LINK = process.env.REACT_APP_GOOGLE_SHEET_LINK; // Não será mais usado diretamente para leitura
+// Variáveis de Ambiente do Vercel
+const GOOGLE_SHEET_LINK = process.env.REACT_APP_GOOGLE_SHEET_LINK; 
 const GOOGLE_APPS_SCRIPT_URL = process.env.REACT_APP_GOOGLE_APPS_SCRIPT_URL; 
-
-// ⭐ SENHA SIMPLES PARA LOGIN (MUDE PARA ALGO MAIS SEGURO)
 const MASTER_PASSWORD = process.env.REACT_APP_MASTER_PASSWORD;
 
 function App() {
@@ -25,32 +22,36 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastSync, setLastSync] = useState(null);
-  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'tabela', 'cadastro'
+  const [activeTab, setActiveTab] = useState('dashboard'); 
   
-  // Estado do Login
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  // Filtros
   const [filterName, setFilterName] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
 
-  // Estado do Formulário de Cadastro
   const [formArtigo, setFormArtigo] = useState({
-    nomeProduto: '',
-    malharia: '',
-    representante: '',
-    cliente: '',
-    dataProjeto: '',
-    dataEnvio: '',
-    situacao: '',
-    observacoes: ''
+    nomeProduto: '', malharia: '', representante: '', cliente: '',
+    dataProjeto: '', dataEnvio: '', situacao: '', observacoes: ''
   });
   const [formMessage, setFormMessage] = useState({ type: '', text: '' });
   const [submitting, setSubmitting] = useState(false);
 
-  // Função para calcular dias passados
+  // Função para formatar data para exibição resumida (DD/MM/AAAA)
+  const formatarDataExibicao = (dataString) => {
+    if (!dataString || dataString.trim() === "" || dataString === "-") return "-";
+    try {
+      if (/^\d{2}\/\d{2}\/\d{4}$/.test(dataString)) return dataString;
+      const dataObj = new Date(dataString);
+      if (isNaN(dataObj.getTime())) return dataString;
+      const dia = dataObj.getDate().toString().padStart(2, '0');
+      const mes = (dataObj.getMonth() + 1).toString().padStart(2, '0');
+      const ano = dataObj.getFullYear();
+      return `${dia}/${mes}/${ano}`;
+    } catch (e) { return dataString; }
+  };
+
   const calcularDiasPassados = (dataString) => {
     try {
       if (!dataString) return 0;
@@ -58,21 +59,15 @@ function App() {
       if (dataString.includes('/')) {
         const partes = dataString.split('/');
         dataObj = new Date(partes[2], partes[1] - 1, partes[0]);
-      } else if (dataString.includes('-')) {
-        dataObj = new Date(dataString);
-      } else {
-        dataObj = new Date(dataString);
-      }
+      } else { dataObj = new Date(dataString); }
       if (isNaN(dataObj.getTime())) return 0;
       const hoje = new Date();
       hoje.setHours(0, 0, 0, 0);
       dataObj.setHours(0, 0, 0, 0);
-      const diferenca = hoje - dataObj;
-      return Math.floor(diferenca / (1000 * 60 * 60 * 24));
+      return Math.floor((hoje.getTime() - dataObj.getTime()) / (1000 * 60 * 60 * 24));
     } catch (e) { return 0; }
   };
 
-  // Função para calcular lead time
   const calcularLeadTime = (dataInicial, dataFinal) => {
     try {
       if (!dataInicial || !dataFinal) return 0;
@@ -80,37 +75,32 @@ function App() {
       if (dataInicial.includes('/')) {
         const p1 = dataInicial.split('/');
         d1 = new Date(p1[2], p1[1] - 1, p1[0]);
+      } else { d1 = new Date(dataInicial); }
+      if (dataFinal.includes('/')) {
         const p2 = dataFinal.split('/');
         d2 = new Date(p2[2], p2[1] - 1, p2[0]);
-      } else {
-        d1 = new Date(dataInicial);
-        d2 = new Date(dataFinal);
-      }
+      } else { d2 = new Date(dataFinal); }
       if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return 0;
       d1.setHours(0, 0, 0, 0);
       d2.setHours(0, 0, 0, 0);
-      const diferenca = d2 - d1;
-      return Math.floor(diferenca / (1000 * 60 * 60 * 24));
+      return Math.floor((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
     } catch (e) { return 0; }
   };
 
-  // Função para sincronizar dados
   const syncData = useCallback(async () => {
-    if (!isLoggedIn) return; // Não sincroniza se não estiver logado
-
+    if (!isLoggedIn) return;
     setLoading(true);
     setError(null);
     try {
-      // Usando o Google Apps Script como proxy para ler os dados da planilha
-      const csvUrl = GOOGLE_APPS_SCRIPT_URL; // O Apps Script já retorna o CSV
+      // Extrai o ID da planilha do link original
+      const match = GOOGLE_SHEET_LINK.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+      if (!match) throw new Error('Link da planilha inválido nas variáveis de ambiente.');
+      const sheetId = match[1];
+      const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0`;
 
       const response = await fetch(csvUrl);
-      if (!response.ok) throw new Error('Não conseguiu acessar o Apps Script. Verifique a URL e as permissões.');
+      if (!response.ok) throw new Error('Não foi possível ler a planilha. Verifique se ela está como "Qualquer pessoa com o link pode ler".');
       const csvText = await response.text();
-
-      if (csvText.includes('<!DOCTYPE html>') || csvText.includes('Page Not Found') || csvText.includes('error')) {
-        throw new Error('Erro ao ler dados do Apps Script. Verifique as permissões ou o log do script.');
-      }
 
       Papa.parse(csvText, {
         header: false,
@@ -124,28 +114,21 @@ function App() {
             let diasAgRetorno = 0;
             let countAgRetorno = 0;
 
-            // ⭐ AJUSTE: Começa da linha 2 (índice 1)
             for (let i = 1; i < rows.length; i++) {
               const row = rows[i];
-              if (!row || row.length < 8) continue;
-
-              const nomeProduto = String(row[0] || '').trim(); // Coluna A
-              const malharia = String(row[1] || '').trim();    // Coluna B
-              const representante = String(row[2] || '').trim(); // Coluna C
-              const cliente = String(row[3] || '').trim(); // Coluna D
-              const dataProjeto = String(row[4] || '').trim(); // Coluna E
-              const dataEnvio = String(row[5] || '').trim();   // Coluna F
-              const situacao = String(row[6] || '').trim(); // Coluna G (Assumido)
-              const observacoes = String(row[7] || '').trim(); // Coluna H
+              if (!row || row.length < 7) continue;
+              const nomeProduto = String(row[0] || '').trim();
+              const cliente = String(row[3] || '').trim();
+              const dataProjeto = String(row[4] || '').trim();
+              const dataEnvio = String(row[5] || '').trim();
+              const situacao = String(row[6] || '').trim();
+              const observacoes = String(row[7] || '').trim();
 
               if (!nomeProduto || !situacao) continue;
-
               items.push({
-                item: nomeProduto,
-                malharia, representante, cliente, situacao,
+                item: nomeProduto, malharia: row[1], representante: row[2], cliente, situacao,
                 dataInicial: dataProjeto, dataFinal: dataEnvio, observacoes
               });
-
               counts[situacao] = (counts[situacao] || 0) + 1;
 
               if (dataProjeto && dataEnvio) {
@@ -154,9 +137,9 @@ function App() {
                 if (dataEnvio.includes('/')) {
                   const partes = dataEnvio.split('/');
                   mes = `${partes[1]}/${partes[2]}`;
-                } else if (dataEnvio.includes('-')) {
-                  const partes = dataEnvio.split('-');
-                  mes = `${partes[1]}/${partes[0]}`;
+                } else {
+                  const d = new Date(dataEnvio);
+                  if (!isNaN(d.getTime())) mes = `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
                 }
                 if (mes) {
                   if (!leadTimesByMonth[mes]) leadTimesByMonth[mes] = { total: 0, count: 0 };
@@ -164,28 +147,21 @@ function App() {
                   leadTimesByMonth[mes].count += 1;
                 }
               }
-
               if (situacao === 'AG. RETORNO' && dataEnvio) {
                 diasAgRetorno += calcularDiasPassados(dataEnvio);
                 countAgRetorno++;
               }
             }
 
-            if (items.length === 0) throw new Error('Nenhum item encontrado na planilha. Verifique se os dados começam na linha 2.');
-
             const chartData = Object.entries(counts).map(([name, value]) => ({
               name, value, fill: COLORS[name] || '#6b7280'
             }));
 
             const leadTimeChartData = Object.entries(leadTimesByMonth)
-              .map(([mes, dados]) => ({
-                mes, leadTime: Math.round(dados.total / dados.count)
-              }))
+              .map(([mes, dados]) => ({ mes, leadTime: Math.round(dados.total / dados.count) }))
               .sort((a, b) => {
-                const pA = a.mes.split('/');
-                const pB = b.mes.split('/');
-                if (pA[1] !== pB[1]) return pA[1] - pB[1];
-                return pA[0] - pB[0];
+                const pA = a.mes.split('/'); const pB = b.mes.split('/');
+                return pA[1] !== pB[1] ? pA[1] - pB[1] : pA[0] - pB[0];
               });
 
             setData({
@@ -200,14 +176,12 @@ function App() {
         }
       });
     } catch (err) { setError(err.message); setLoading(false); }
-  }, [isLoggedIn]); // Depende do estado de login
+  }, [isLoggedIn]);
 
   useEffect(() => {
     if (isLoggedIn) {
       syncData();
-      const interval = setInterval(() => {
-        syncData();
-      }, 30 * 60 * 1000);
+      const interval = setInterval(() => syncData(), 30 * 60 * 1000);
       return () => clearInterval(interval);
     }
   }, [isLoggedIn, syncData]);
@@ -217,9 +191,6 @@ function App() {
     setSubmitting(true);
     setFormMessage({ type: '', text: '' });
     try {
-      if (!GOOGLE_APPS_SCRIPT_URL) {
-        throw new Error('Por favor, configure a variável de ambiente REACT_APP_GOOGLE_APPS_SCRIPT_URL no Vercel.');
-      }
       const now = new Date();
       const dataCadastro = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
       const payload = {
@@ -247,12 +218,8 @@ function App() {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    if (password === MASTER_PASSWORD) {
-      setIsLoggedIn(true);
-      setLoginError('');
-    } else {
-      setLoginError('Senha incorreta. Tente novamente.');
-    }
+    if (password === MASTER_PASSWORD) { setIsLoggedIn(true); setLoginError(''); }
+    else { setLoginError('Senha incorreta.'); }
   };
 
   const filteredItems = data?.items.filter(item => 
@@ -308,14 +275,7 @@ function App() {
         <div style={styles.loginCard}>
           <h2>Acesso Restrito</h2>
           <form onSubmit={handleLogin}>
-            <input
-              type="password"
-              placeholder="Digite a senha"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={styles.loginInput}
-              required
-            />
+            <input type="password" placeholder="Senha" value={password} onChange={(e) => setPassword(e.target.value)} style={styles.loginInput} required />
             {loginError && <div style={styles.loginError}>{loginError}</div>}
             <button type="submit" style={styles.loginButton}>Entrar</button>
           </form>
@@ -354,27 +314,17 @@ function App() {
         {activeTab === 'dashboard' && (
           <>
             <div style={styles.grid}>
-              <div style={styles.statCard}>
-                <div style={styles.statValue}>{data?.totalItems || 0}</div>
-                <div style={styles.statLabel}>Total de Itens</div>
-              </div>
-              <div style={styles.statCard}>
-                <div style={styles.statValue}>{data?.countAgRetorno || 0}</div>
-                <div style={styles.statLabel}>Aguardando Retorno</div>
-              </div>
-              <div style={styles.statCard}>
-                <div style={styles.statValue}>{data?.mediaAgRetorno || 0} dias</div>
-                <div style={styles.statLabel}>Média de Espera (AG. RETORNO)</div>
-              </div>
+              <div style={styles.statCard}><div style={styles.statValue}>{data?.totalItems || 0}</div><div style={styles.statLabel}>Total de Itens</div></div>
+              <div style={styles.statCard}><div style={styles.statValue}>{data?.countAgRetorno || 0}</div><div style={styles.statLabel}>Aguardando Retorno</div></div>
+              <div style={styles.statCard}><div style={styles.statValue}>{data?.mediaAgRetorno || 0} dias</div><div style={styles.statLabel}>Média de Espera</div></div>
             </div>
-
             <div style={styles.chartGrid}>
               <div style={styles.card}>
                 <h3>Situação Geral</h3>
                 <div style={{ height: 300 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={data?.chartData} cx="50%" cy="50%" outerRadius={80} fill="#8884d8" dataKey="value" label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                      <Pie data={data?.chartData} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}>
                         {data?.chartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
                       </Pie>
                       <Tooltip />
@@ -413,13 +363,13 @@ function App() {
               <table style={styles.table}>
                 <thead>
                   <tr>
-                    <th style={styles.th}>Nome do Produto</th>
+                    <th style={styles.th}>Produto</th>
                     <th style={styles.th}>Malharia</th>
                     <th style={styles.th}>Representante</th>
                     <th style={styles.th}>Cliente</th>
                     <th style={styles.th}>Situação</th>
-                    <th style={styles.th}>Data do Projeto</th>
-                    <th style={styles.th}>Data de Envio</th>
+                    <th style={styles.th}>Data Projeto</th>
+                    <th style={styles.th}>Data Envio</th>
                     <th style={styles.th}>Observação</th>
                   </tr>
                 </thead>
@@ -431,12 +381,10 @@ function App() {
                       <td style={styles.td}>{item.representante}</td>
                       <td style={styles.td}>{item.cliente}</td>
                       <td style={styles.td}>
-                        <span style={{...styles.badge, backgroundColor: COLORS[item.situacao] + '20', color: COLORS[item.situacao]}}>
-                          {item.situacao}
-                        </span>
+                        <span style={{...styles.badge, backgroundColor: COLORS[item.situacao] + '20', color: COLORS[item.situacao]}}>{item.situacao}</span>
                       </td>
-                      <td style={styles.td}>{item.dataInicial}</td>
-                      <td style={styles.td}>{item.dataFinal}</td>
+                      <td style={styles.td}>{formatarDataExibicao(item.dataInicial)}</td>
+                      <td style={styles.td}>{formatarDataExibicao(item.dataFinal)}</td>
                       <td style={styles.td}>{item.observacoes}</td>
                     </tr>
                   ))}
@@ -449,47 +397,21 @@ function App() {
         {activeTab === 'cadastro' && (
           <div style={styles.card}>
             <h3>Cadastro de Novo Artigo</h3>
-            {formMessage.type === 'success' && <div style={styles.messageSuccess}>{formMessage.text}</div>}
-            {formMessage.type === 'error' && <div style={styles.messageErrorForm}>{formMessage.text}</div>}
+            {formMessage.text && <div style={formMessage.type === 'success' ? styles.messageSuccess : styles.messageErrorForm}>{formMessage.text}</div>}
             <form onSubmit={handleSubmit}>
+              <div style={styles.formGroup}><label style={styles.formLabel}>Produto:</label><input type="text" value={formArtigo.nomeProduto} onChange={e => setFormArtigo({...formArtigo, nomeProduto: e.target.value})} style={styles.formInput} required /></div>
+              <div style={styles.formGroup}><label style={styles.formLabel}>Cliente:</label><input type="text" value={formArtigo.cliente} onChange={e => setFormArtigo({...formArtigo, cliente: e.target.value})} style={styles.formInput} required /></div>
+              <div style={styles.formGroup}><label style={styles.formLabel}>Data Projeto:</label><input type="date" value={formArtigo.dataProjeto} onChange={e => setFormArtigo({...formArtigo, dataProjeto: e.target.value})} style={styles.formInput} /></div>
+              <div style={styles.formGroup}><label style={styles.formLabel}>Data Envio:</label><input type="date" value={formArtigo.dataEnvio} onChange={e => setFormArtigo({...formArtigo, dataEnvio: e.target.value})} style={styles.formInput} /></div>
               <div style={styles.formGroup}>
-                <label htmlFor="nomeProduto" style={styles.formLabel}>Nome do Produto:</label>
-                <input type="text" id="nomeProduto" name="nomeProduto" value={formArtigo.nomeProduto} onChange={(e) => setFormArtigo({...formArtigo, nomeProduto: e.target.value})} style={styles.formInput} required />
-              </div>
-              <div style={styles.formGroup}>
-                <label htmlFor="malharia" style={styles.formLabel}>Malharia:</label>
-                <input type="text" id="malharia" name="malharia" value={formArtigo.malharia} onChange={(e) => setFormArtigo({...formArtigo, malharia: e.target.value})} style={styles.formInput} />
-              </div>
-              <div style={styles.formGroup}>
-                <label htmlFor="representante" style={styles.formLabel}>Representante:</label>
-                <input type="text" id="representante" name="representante" value={formArtigo.representante} onChange={(e) => setFormArtigo({...formArtigo, representante: e.target.value})} style={styles.formInput} />
-              </div>
-              <div style={styles.formGroup}>
-                <label htmlFor="cliente" style={styles.formLabel}>Cliente:</label>
-                <input type="text" id="cliente" name="cliente" value={formArtigo.cliente} onChange={(e) => setFormArtigo({...formArtigo, cliente: e.target.value})} style={styles.formInput} required />
-              </div>
-              <div style={styles.formGroup}>
-                <label htmlFor="dataProjeto" style={styles.formLabel}>Data do Projeto:</label>
-                <input type="date" id="dataProjeto" name="dataProjeto" value={formArtigo.dataProjeto} onChange={(e) => setFormArtigo({...formArtigo, dataProjeto: e.target.value})} style={styles.formInput} />
-              </div>
-              <div style={styles.formGroup}>
-                <label htmlFor="dataEnvio" style={styles.formLabel}>Data de Envio:</label>
-                <input type="date" id="dataEnvio" name="dataEnvio" value={formArtigo.dataEnvio} onChange={(e) => setFormArtigo({...formArtigo, dataEnvio: e.target.value})} style={styles.formInput} />
-              </div>
-              <div style={styles.formGroup}>
-                <label htmlFor="situacao" style={styles.formLabel}>Situação:</label>
-                <select id="situacao" name="situacao" value={formArtigo.situacao} onChange={(e) => setFormArtigo({...formArtigo, situacao: e.target.value})} style={styles.formInput} required>
-                  <option value="">Selecione uma situação</option>
-                  {Object.keys(COLORS).map(status => <option key={status} value={status}>{status}</option>)}
+                <label style={styles.formLabel}>Situação:</label>
+                <select value={formArtigo.situacao} onChange={e => setFormArtigo({...formArtigo, situacao: e.target.value})} style={styles.formSelect} required>
+                  <option value="">Selecione...</option>
+                  {Object.keys(COLORS).map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
-              <div style={styles.formGroup}>
-                <label htmlFor="observacoes" style={styles.formLabel}>Observação:</label>
-                <textarea id="observacoes" name="observacoes" value={formArtigo.observacoes} onChange={(e) => setFormArtigo({...formArtigo, observacoes: e.target.value})} style={styles.formTextarea}></textarea>
-              </div>
-              <button type="submit" disabled={submitting} style={styles.formButton}>
-                {submitting ? 'Enviando...' : 'Cadastrar Artigo'}
-              </button>
+              <div style={styles.formGroup}><label style={styles.formLabel}>Observação:</label><textarea value={formArtigo.observacoes} onChange={e => setFormArtigo({...formArtigo, observacoes: e.target.value})} style={styles.formTextarea}></textarea></div>
+              <button type="submit" disabled={submitting} style={styles.formButton}>{submitting ? 'Enviando...' : 'Cadastrar Artigo'}</button>
             </form>
           </div>
         )}
