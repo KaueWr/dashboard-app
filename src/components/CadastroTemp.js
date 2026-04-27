@@ -40,7 +40,7 @@ function CadastroTemp({ clientKey, onSuccess, colors }) {
       const now = new Date();
 
       const payload = {
-        "NOME DO PRODUTO": formArtigo.nomeProduto,
+        "NOME DO PROJETO": formArtigo.nomeProduto,
         "MALHARIA": formArtigo.malharia,
         "REPRESENTANTE": formArtigo.representante,
         "CLIENTE": formArtigo.cliente,
