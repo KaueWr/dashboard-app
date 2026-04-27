@@ -73,41 +73,37 @@ function App() {
 
       <main style={{ maxWidth: '1200px', margin: '2rem auto', padding: '0 1rem' }}>
 
-        {error && (
-          <div style={{
-            backgroundColor: '#fee2e2',
-            color: '#b91c1c',
-            padding: '1rem',
-            borderRadius: '0.5rem',
-            marginBottom: '1rem'
-          }}>
-            {error}
-          </div>
-        )}
+  {error && (
+    <div style={{
+      backgroundColor: '#fee2e2',
+      color: '#b91c1c',
+      padding: '1rem',
+      borderRadius: '0.5rem',
+      marginBottom: '1rem'
+    }}>
+      {error}
+    </div>
+  )}
 
-        {activeTab === 'dashboard' && (
-          <Dashboard data={data} loading={loading} />
-        )}
+  {/* 🔥 RENDERIZAÇÃO CONTROLADA */}
+  {activeTab === 'dashboard' ? (
+    <Dashboard data={data} loading={loading} />
+  ) : activeTab === 'tabela' ? (
+    <TabelaItens data={data} colors={COLORS} />
+  ) : activeTab === 'cadastro' ? (
+    <Cadastro 
+      onSuccess={syncData}
+      colors={COLORS}
+      clientKey={CLIENT_KEY}
+    />
+  ) : activeTab === 'pedido' ? (
+    <CadastroPedido 
+      clientKey={CLIENT_KEY}
+      onSuccess={syncData}
+    />
+  ) : null}
 
-        {activeTab === 'tabela' && (
-          <TabelaItens data={data} colors={COLORS} />
-        )}
-
-        {activeTab === 'cadastro' && (
-          <Cadastro 
-            onSuccess={syncData}
-            colors={COLORS}
-            clientKey={CLIENT_KEY}
-          />
-        )}
-        {activeTab === 'pedido' && (
-          <CadastroPedido 
-           clientKey={CLIENT_KEY}
-          onSuccess={syncData}
-          />
-        )}
-
-      </main>
+</main>
     </div>
   );
 }

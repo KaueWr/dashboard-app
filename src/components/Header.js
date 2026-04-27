@@ -2,6 +2,7 @@ import React from 'react';
 import logoGroupTextil from '../assets/logo_group_textil.png';
 
 function Header({ activeTab, setActiveTab, syncData, loading, lastSync }) {
+
   const styles = {
     header: { 
       backgroundColor: '#1f2937', 
@@ -18,14 +19,11 @@ function Header({ activeTab, setActiveTab, syncData, loading, lastSync }) {
     },
     logo: { 
       display: 'flex', 
-      alignItems: 'center', 
-      gap: '0' 
+      alignItems: 'center'
     },
     logoImage: { 
       height: '50px',
-      width: 'auto', 
-      objectFit: 'contain',
-      padding: '0.5rem 0'
+      objectFit: 'contain'
     },
     headerRight: { 
       display: 'flex', 
@@ -38,7 +36,6 @@ function Header({ activeTab, setActiveTab, syncData, loading, lastSync }) {
       border: 'none', 
       cursor: 'pointer', 
       fontWeight: '600', 
-      transition: 'all 0.2s', 
       backgroundColor: '#3b82f6', 
       color: 'white' 
     },
@@ -48,12 +45,12 @@ function Header({ activeTab, setActiveTab, syncData, loading, lastSync }) {
     },
     tabsContainer: { 
       display: 'flex', 
-      gap: '1rem', 
+      gap: '1.5rem', 
       maxWidth: '1200px', 
       margin: '0.5rem auto 0' 
     },
     tab: { 
-      padding: '0.5rem 1rem', 
+      padding: '0.5rem 0.5rem', 
       backgroundColor: 'transparent', 
       border: 'none', 
       color: '#9ca3af', 
@@ -69,6 +66,8 @@ function Header({ activeTab, setActiveTab, syncData, loading, lastSync }) {
 
   return (
     <header style={styles.header}>
+
+      {/* 🔝 TOPO */}
       <div style={styles.headerContent}>
         <div style={styles.logo}>
           <img 
@@ -77,45 +76,52 @@ function Header({ activeTab, setActiveTab, syncData, loading, lastSync }) {
             style={styles.logoImage}
           />
         </div>
+
         <div style={styles.headerRight}>
           <button onClick={syncData} disabled={loading} style={styles.button}>
             {loading ? '⏳ Sincronizando...' : '🔄 Atualizar'}
           </button>
-          {lastSync && <span style={styles.lastSyncText}>Atualizado: {lastSync}</span>}
+
+          {lastSync && (
+            <span style={styles.lastSyncText}>
+              Atualizado: {lastSync}
+            </span>
+          )}
         </div>
       </div>
+
+      {/* 🔽 MENU */}
       <div style={styles.tabsContainer}>
+
         <button 
           onClick={() => setActiveTab('dashboard')} 
           style={{...styles.tab, ...(activeTab === 'dashboard' ? styles.tabActive : {})}}
         >
           Painel
         </button>
+
         <button 
           onClick={() => setActiveTab('tabela')} 
           style={{...styles.tab, ...(activeTab === 'tabela' ? styles.tabActive : {})}}
         >
           Lista de Itens
         </button>
+
         <button 
           onClick={() => setActiveTab('cadastro')} 
           style={{...styles.tab, ...(activeTab === 'cadastro' ? styles.tabActive : {})}}
         >
           Cadastro de Artigo
-            <button
-            onClick={() => setActiveTab('pedido')}
-            style={{
-              backgroundColor: activeTab === 'pedido' ? '#1f2937' : '#374151',
-              color: 'white',
-              padding: '0.5rem 1rem',
-              border: 'none',
-              borderRadius: '0.5rem',
-              cursor: 'pointer'
-                    }}
-        >
-                  Pedidos
-</button>
         </button>
+
+        {/* ✅ NOVO BOTÃO CORRETO */}
+        <button 
+          onClick={() => setActiveTab('pedido')} 
+          style={{...styles.tab, ...(activeTab === 'pedido' ? styles.tabActive : {})}}
+        >
+          Pedidos
+        </button>
+
       </div>
     </header>
   );
