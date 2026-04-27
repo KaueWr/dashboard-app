@@ -75,38 +75,54 @@ function CadastroPedido({ clientKey, onSuccess }) {
       borderRadius: '10px',
       boxShadow: '0 4px 10px rgba(0,0,0,0.05)'
     },
+
     title: {
-      fontSize: '1.5rem',
-      marginBottom: '1.5rem',
-      fontWeight: 'bold'
+      fontSize: '1.6rem',
+      fontWeight: 'bold',
+      marginBottom: '1.5rem'
     },
-    grid: {
+
+    group: {
+      marginBottom: '1.2rem'
+    },
+
+    row: {
       display: 'grid',
-      gridTemplateColumns: 'repeat(3, 1fr)',
-      gap: '1rem',
-      marginBottom: '1rem'
+      gridTemplateColumns: '1fr 1fr',
+      gap: '1rem'
     },
+
+    label: {
+      display: 'block',
+      marginBottom: '0.3rem',
+      fontWeight: '500'
+    },
+
     input: {
+      width: '100%',
       padding: '0.6rem',
       borderRadius: '6px',
       border: '1px solid #d1d5db'
     },
+
     textarea: {
-      gridColumn: 'span 3',
+      width: '100%',
       padding: '0.6rem',
       borderRadius: '6px',
       border: '1px solid #d1d5db'
     },
+
     button: {
+      marginTop: '1rem',
       backgroundColor: '#10b981',
       color: 'white',
       padding: '0.7rem 1.5rem',
       border: 'none',
       borderRadius: '6px',
       cursor: 'pointer',
-      fontWeight: 'bold',
-      marginTop: '1rem'
+      fontWeight: 'bold'
     },
+
     success: {
       backgroundColor: '#d1fae5',
       color: '#065f46',
@@ -129,40 +145,84 @@ function CadastroPedido({ clientKey, onSuccess }) {
 
       <form onSubmit={handleSubmit}>
 
-        <div style={styles.grid}>
-          <input style={styles.input} placeholder="Cliente"
-            onChange={e => setForm({...form, cliente: e.target.value})} />
-
-          <input style={styles.input} placeholder="Representante"
-            onChange={e => setForm({...form, representante: e.target.value})} />
-
-          <select style={styles.input}
-            onChange={(e) => handleArtigoChange(e.target.value)}>
-            <option value="">Selecione o artigo</option>
-            {artigos.map((item, index) => (
-              <option key={index} value={item.artigo}>
-                {item.artigo}
-              </option>
-            ))}
-          </select>
-
-          <input style={styles.input} value={form.cor} readOnly placeholder="Cor" />
-
-          <input style={styles.input} placeholder="Quantidade"
-            onChange={e => setForm({...form, quantidade: e.target.value})} />
-
-          <input style={styles.input} placeholder="Valor"
-            onChange={e => setForm({...form, valor: e.target.value})} />
-
-          <input style={styles.input} placeholder="Status"
-            onChange={e => setForm({...form, status: e.target.value})} />
-
-          <input style={styles.input} type="date"
-            onChange={e => setForm({...form, data: e.target.value})} />
+        <div style={styles.group}>
+          <label style={styles.label}>Cliente</label>
+          <input style={styles.input}
+            onChange={e => setForm({...form, cliente: e.target.value})}
+          />
         </div>
 
-        <textarea style={styles.textarea} placeholder="Observação"
-          onChange={e => setForm({...form, observacao: e.target.value})} />
+        <div style={styles.group}>
+          <label style={styles.label}>Representante</label>
+          <input style={styles.input}
+            onChange={e => setForm({...form, representante: e.target.value})}
+          />
+        </div>
+
+        <div style={styles.row}>
+
+          <div>
+            <label style={styles.label}>Artigo</label>
+            <select style={styles.input}
+              onChange={(e) => handleArtigoChange(e.target.value)}>
+              <option value="">Selecione</option>
+              {artigos.map((item, index) => (
+                <option key={index} value={item.artigo}>
+                  {item.artigo}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={styles.label}>Cor</label>
+            <input style={styles.input} value={form.cor} readOnly />
+          </div>
+
+        </div>
+
+        <div style={styles.row}>
+
+          <div>
+            <label style={styles.label}>Quantidade</label>
+            <input style={styles.input}
+              onChange={e => setForm({...form, quantidade: e.target.value})}
+            />
+          </div>
+
+          <div>
+            <label style={styles.label}>Valor</label>
+            <input style={styles.input}
+              onChange={e => setForm({...form, valor: e.target.value})}
+            />
+          </div>
+
+        </div>
+
+        <div style={styles.row}>
+
+          <div>
+            <label style={styles.label}>Status</label>
+            <input style={styles.input}
+              onChange={e => setForm({...form, status: e.target.value})}
+            />
+          </div>
+
+          <div>
+            <label style={styles.label}>Data do Pedido</label>
+            <input type="date" style={styles.input}
+              onChange={e => setForm({...form, data: e.target.value})}
+            />
+          </div>
+
+        </div>
+
+        <div style={styles.group}>
+          <label style={styles.label}>Observação</label>
+          <textarea style={styles.textarea}
+            onChange={e => setForm({...form, observacao: e.target.value})}
+          />
+        </div>
 
         <button type="submit" style={styles.button}>
           Cadastrar Pedido
