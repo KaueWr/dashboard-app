@@ -102,6 +102,19 @@ function Header({ activeTab, setActiveTab, syncData, loading, lastSync }) {
           style={{...styles.tab, ...(activeTab === 'cadastro' ? styles.tabActive : {})}}
         >
           Cadastro de Artigo
+            <button
+            onClick={() => setActiveTab('pedido')}
+            style={{
+              backgroundColor: activeTab === 'pedido' ? '#1f2937' : '#374151',
+              color: 'white',
+              padding: '0.5rem 1rem',
+              border: 'none',
+              borderRadius: '0.5rem',
+              cursor: 'pointer'
+                    }}
+        >
+                  Pedidos
+</button>
         </button>
       </div>
     </header>

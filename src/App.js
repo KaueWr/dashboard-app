@@ -3,6 +3,7 @@ import Header from './components/Header.js';
 import Dashboard from './components/Dashboard.js';
 import TabelaItens from './components/TabelaItens.js';
 import Cadastro from './components/CadastroTemp.js';
+import CadastroPedido from './components/CadastroPedido';
 
 // 🔐 CONFIGURAÇÃO SEGURA
 const API_URL = "/api/data";
@@ -97,6 +98,12 @@ function App() {
             onSuccess={syncData}
             colors={COLORS}
             clientKey={CLIENT_KEY}
+          />
+        )}
+        {activeTab === 'pedido' && (
+          <CadastroPedido 
+           clientKey={CLIENT_KEY}
+          onSuccess={syncData}
           />
         )}
 
