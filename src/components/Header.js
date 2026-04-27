@@ -10,6 +10,7 @@ function Header({ activeTab, setActiveTab, syncData, loading, lastSync }) {
       padding: '0.5rem 2rem',
       boxShadow: '0 2px 4px rgba(0,0,0,0.1)' 
     },
+
     headerContent: { 
       display: 'flex', 
       justifyContent: 'space-between', 
@@ -17,19 +18,23 @@ function Header({ activeTab, setActiveTab, syncData, loading, lastSync }) {
       maxWidth: '1200px', 
       margin: '0 auto' 
     },
+
     logo: { 
       display: 'flex', 
       alignItems: 'center'
     },
+
     logoImage: { 
       height: '50px',
       objectFit: 'contain'
     },
+
     headerRight: { 
       display: 'flex', 
       alignItems: 'center', 
       gap: '1rem' 
     },
+
     button: { 
       padding: '0.5rem 1rem', 
       borderRadius: '0.375rem', 
@@ -39,25 +44,34 @@ function Header({ activeTab, setActiveTab, syncData, loading, lastSync }) {
       backgroundColor: '#3b82f6', 
       color: 'white' 
     },
+
     lastSyncText: { 
       fontSize: '0.875rem', 
       color: '#9ca3af' 
     },
+
+    // 🔥 CORRIGIDO AQUI
     tabsContainer: { 
       display: 'flex', 
-      gap: '1.5rem', 
+      gap: '1rem', 
       maxWidth: '1200px', 
-      margin: '0.5rem auto 0' 
+      margin: '0.5rem auto 0',
+      flexWrap: 'wrap',        // evita quebra bugada
+      alignItems: 'center'
     },
+
+    // 🔥 CORRIGIDO AQUI
     tab: { 
-      padding: '0.5rem 0.5rem', 
+      padding: '0.5rem 1rem', 
       backgroundColor: 'transparent', 
       border: 'none', 
       color: '#9ca3af', 
       cursor: 'pointer', 
       borderBottom: '2px solid transparent',
-      fontSize: '0.95rem'
+      fontSize: '0.95rem',
+      whiteSpace: 'nowrap'     // impede quebrar texto
     },
+
     tabActive: { 
       color: '#3b82f6', 
       borderBottom: '2px solid #3b82f6' 
@@ -111,10 +125,9 @@ function Header({ activeTab, setActiveTab, syncData, loading, lastSync }) {
           onClick={() => setActiveTab('cadastro')} 
           style={{...styles.tab, ...(activeTab === 'cadastro' ? styles.tabActive : {})}}
         >
-          Cadastro de Artigo
+          Cadastro
         </button>
 
-        {/* ✅ NOVO BOTÃO CORRETO */}
         <button 
           onClick={() => setActiveTab('pedido')} 
           style={{...styles.tab, ...(activeTab === 'pedido' ? styles.tabActive : {})}}
