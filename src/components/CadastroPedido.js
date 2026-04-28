@@ -11,96 +11,75 @@ function CadastroPedido({ clientKey, onSuccess }) {
   const [success, setSuccess] = useState(false);
 
   const [itens, setItens] = useState([
-  { artigo: '', cor: '', quantidade: '', peso: '', valor: '' }
-]);
+    { artigo: '', cor: '', quantidade: '', peso: '', valor: '' }
+  ]);
 
   const [form, setForm] = useState({
-  cliente: '',
-  representante: '',
-  artigo: '',
-  cor: '',
-  quantidade: '',
-  valor: '',
-  status: '',
-  data: '',
-  observacao: '',
-  comissao: '' // 🔥 NOVO
-});
+    cliente: '',
+    representante: '',
+    comissao: '',
+    status: '',
+    data: '',
+    observacao: ''
+  });
 
   useEffect(() => {
-  fetch('/api/data', {
-    headers: { 'x-api-key': clientKey }
-  })
-    .then(res => res.json())
-    .then(data => {
+    fetch('/api/data', {
+      headers: { 'x-api-key': clientKey }
+    })
+      .then(res => res.json())
+      .then(data => {
+        console.log("DADOS API:", data);
+        setProdutos(data.produtos || []);
+        setCores(data.cores || []);
+        setClientes(data.clientes || []);
+      });
+  }, [clientKey]);
 
-      console.log("DADOS API:", data); // 👈 ADICIONA ISSO
+  const addItem = () => {
+    setItens([...itens, { artigo: '', cor: '', quantidade: '', peso: '', valor: '' }]);
+  };
 
-      setProdutos(data.produtos || []);
-      setCores(data.cores || []);
-      setClientes(data.clientes || []);
+  const updateItem = (index, field, value) => {
+    const novosItens = [...itens];
+    novosItens[index][field] = value;
 
-    });
-}, [clientKey]);
-
- const handleArtigoChange = (artigoSelecionado) => {
-  const produto = produtos.find(p => p.artigo === artigoSelecionado);
-
-  let preco = '';
-
-  if (produto && form.comissao) {
-    preco = produto.precos?.[form.comissao] || '';
-  }
-
-  setForm({
-    ...form,
-    artigo: artigoSelecionado,
-    valor: preco
-  });
-};
-const addItem = () => {
-  setItens([...itens, { artigo: '', cor: '', quantidade: '', peso: '', valor: '' }]);
-};
-
-const updateItem = (index, field, value) => {
-  const novosItens = [...itens];
-  novosItens[index][field] = value;
-
-  if (field === 'artigo') {
-    const produto = produtos.find(p => p.artigo === value);
-    if (produto && form.comissao) {
-      novosItens[index].valor = produto.precos?.[form.comissao] || '';
+    if (field === 'artigo') {
+      const produto = produtos.find(p => p.artigo === value);
+      if (produto && form.comissao) {
+        novosItens[index].valor = produto.precos?.[form.comissao] || '';
+      }
     }
-  }
 
-  setItens(novosItens);
-};
+    setItens(novosItens);
+  };
 
-useEffect(() => {
-  if (!form.artigo || !form.comissao) return;
-
-  const produto = produtos.find(p => p.artigo === form.artigo);
-
-  if (produto) {
-    setForm(prev => ({
-      ...prev,
-      valor: produto.precos?.[form.comissao] || ''
-    }));
-  }
-
-}, [form.comissao, form.artigo]);
+  // Atualiza preços de todos os itens se a comissão mudar
+  useEffect(() => {
+    if (!form.comissao) return;
+    const novosItens = itens.map(item => {
+      const produto = produtos.find(p => p.artigo === item.artigo);
+      if (produto) {
+        return { ...item, valor: produto.precos?.[form.comissao] || '' };
+      }
+      return item;
+    });
+    setItens(novosItens);
+  }, [form.comissao]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     const payload = {
-  tipo: "pedido",
-  cliente: form.cliente,
-  representante: form.representante,
-  comissao: form.comissao,
-  data: form.data,
-  itens: itens
-};
+      tipo: "pedido",
+      cliente: form.cliente,
+      representante: form.representante,
+      comissao: form.comissao,
+      data: form.data,
+      status: form.status,
+      observacao: form.observacao,
+      itens: itens
+    };
 
     await fetch('/api/data', {
       method: 'POST',
@@ -113,11 +92,9 @@ useEffect(() => {
 
     setSuccess(true);
     setTimeout(() => setSuccess(false), 3000);
-
     onSuccess();
   };
 
-  // 🎨 NOVO LAYOUT PROFISSIONAL (CSS-in-JS)
   const styles = {
     container: {
       maxWidth: '850px',
@@ -149,8 +126,7 @@ useEffect(() => {
       marginBottom: '2rem',
       textAlign: 'center',
       fontWeight: '600',
-      border: '1px solid #bbf7d0',
-      animation: 'fadeIn 0.3s ease-in'
+      border: '1px solid #bbf7d0'
     },
     formGrid: {
       display: 'grid',
@@ -177,7 +153,6 @@ useEffect(() => {
       border: '1px solid #d1d5db',
       fontSize: '1rem',
       color: '#1f2937',
-      transition: 'all 0.2s',
       backgroundColor: '#f9fafb',
       outline: 'none',
       width: '100%',
@@ -188,7 +163,7 @@ useEffect(() => {
       borderRadius: '10px',
       border: '1px solid #d1d5db',
       fontSize: '1rem',
-      minHeight: '120px',
+      minHeight: '100px',
       backgroundColor: '#f9fafb',
       width: '100%',
       boxSizing: 'border-box',
@@ -205,12 +180,10 @@ useEffect(() => {
       fontSize: '1.1rem',
       fontWeight: '700',
       cursor: 'pointer',
-      transition: 'all 0.3s',
       marginTop: '1rem',
       boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.2)'
     },
     buttonSecondary: {
-      width: 'auto',
       padding: '0.8rem 1.5rem',
       backgroundColor: '#f3f4f6',
       color: '#374151',
@@ -219,12 +192,11 @@ useEffect(() => {
       fontSize: '0.95rem',
       fontWeight: '600',
       cursor: 'pointer',
-      transition: 'all 0.2s',
-      marginBottom: '1rem'
+      marginBottom: '1.5rem'
     },
     buttonAction: {
       width: '100%',
-      padding: '1rem',
+      padding: '1.1rem',
       backgroundColor: '#10b981',
       color: 'white',
       border: 'none',
@@ -232,12 +204,10 @@ useEffect(() => {
       fontSize: '1.1rem',
       fontWeight: '700',
       cursor: 'pointer',
-      transition: 'all 0.3s',
-      marginTop: '1rem',
+      marginTop: '1.5rem',
       boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)'
     },
     buttonOutline: {
-      width: 'auto',
       padding: '0.6rem 1rem',
       backgroundColor: 'transparent',
       color: '#2563eb',
@@ -245,28 +215,22 @@ useEffect(() => {
       borderRadius: '10px',
       fontSize: '0.9rem',
       fontWeight: '700',
-      cursor: 'pointer',
-      transition: 'all 0.2s',
-      marginBottom: '1rem'
-    },
-    row: {
-      display: 'contents' // Mantém o grid pai controlando
+      cursor: 'pointer'
     },
     gridHeader: {
       display: 'grid',
-      gridTemplateColumns: '2fr 1fr 1fr 1fr 1.2fr',
+      gridTemplateColumns: '2fr 1.5fr 1fr 1fr 1.2fr',
       gap: '10px',
       fontWeight: '700',
       marginBottom: '10px',
       color: '#4b5563',
       fontSize: '0.85rem',
       textTransform: 'uppercase',
-      letterSpacing: '0.025em',
       padding: '0 10px'
     },
     gridRow: {
       display: 'grid',
-      gridTemplateColumns: '2fr 1fr 1fr 1fr 1.2fr',
+      gridTemplateColumns: '2fr 1.5fr 1fr 1fr 1.2fr',
       gap: '10px',
       marginBottom: '10px',
       alignItems: 'center',
@@ -291,7 +255,6 @@ useEffect(() => {
 
       {step === 1 && (
         <form onSubmit={(e) => { e.preventDefault(); setStep(2); }} style={styles.formGrid}>
-          {/* CLIENTE */}
           <div style={styles.group}>
             <label style={styles.label}>Cliente</label>
             <select 
@@ -307,7 +270,6 @@ useEffect(() => {
             </select>
           </div>
 
-          {/* REPRESENTANTE */}
           <div style={styles.group}>
             <label style={styles.label}>Representante</label>
             <input 
@@ -319,39 +281,6 @@ useEffect(() => {
             />
           </div>
 
-          {/* ARTIGO */}
-          <div style={styles.group}>
-            <label style={styles.label}>Artigo</label>
-            <select 
-              style={styles.input}
-              value={form.artigo}
-              onChange={(e) => handleArtigoChange(e.target.value)}
-              required
-            >
-              <option value="">Selecione o Artigo</option>
-              {produtos.map((item) => (
-                <option key={item.id} value={item.artigo}>{item.artigo}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* COR */}
-          <div style={styles.group}>
-            <label style={styles.label}>Cor</label>
-            <select 
-              style={styles.input}
-              value={form.cor}
-              onChange={e => setForm({...form, cor: e.target.value})}
-              required
-            >
-              <option value="">Selecione a Cor</option>
-              {cores.map((c, index) => (
-                <option key={index} value={c}>{c}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* COMISSÃO */}
           <div style={styles.group}>
             <label style={styles.label}>Comissão</label>
             <select
@@ -367,31 +296,6 @@ useEffect(() => {
             </select>
           </div>
 
-          {/* QUANTIDADE */}
-          <div style={styles.group}>
-            <label style={styles.label}>Quantidade Total</label>
-            <input 
-              style={styles.input}
-              type="number"
-              placeholder="0.00"
-              value={form.quantidade}
-              onChange={e => setForm({...form, quantidade: e.target.value})}
-              required
-            />
-          </div>
-
-          {/* VALOR UNITÁRIO */}
-          <div style={styles.group}>
-            <label style={styles.label}>Valor Unitário Estimado</label>
-            <input 
-              style={{...styles.input, backgroundColor: '#f3f4f6', cursor: 'not-allowed'}}
-              value={form.valor ? `R$ ${form.valor}` : ''}
-              readOnly
-              placeholder="Valor automático"
-            />
-          </div>
-
-          {/* STATUS */}
           <div style={styles.group}>
             <label style={styles.label}>Status</label>
             <select 
@@ -408,7 +312,6 @@ useEffect(() => {
             </select>
           </div>
 
-          {/* DATA DO PEDIDO */}
           <div style={styles.group}>
             <label style={styles.label}>Data do Pedido</label>
             <input 
@@ -420,7 +323,6 @@ useEffect(() => {
             />
           </div>
 
-          {/* OBSERVAÇÃO */}
           <div style={{...styles.group, ...styles.fullWidth}}>
             <label style={styles.label}>Observações</label>
             <textarea 
@@ -431,7 +333,6 @@ useEffect(() => {
             />
           </div>
 
-          {/* BOTÃO PRÓXIMO */}
           <div style={styles.fullWidth}>
             <button type="submit" style={styles.button}>
               Próximo Passo: Adicionar Itens →
@@ -441,7 +342,7 @@ useEffect(() => {
       )}
 
       {step === 2 && (
-        <div style={{ animation: 'fadeIn 0.3s ease-in' }}>
+        <div>
           <button 
             type="button" 
             onClick={() => setStep(1)} 
@@ -464,6 +365,7 @@ useEffect(() => {
                 style={{...styles.input, padding: '0.5rem'}}
                 value={item.artigo}
                 onChange={e => updateItem(index, 'artigo', e.target.value)}
+                required
               >
                 <option value="">Artigo</option>
                 {produtos.map(p => (
@@ -475,6 +377,7 @@ useEffect(() => {
                 style={{...styles.input, padding: '0.5rem'}}
                 value={item.cor}
                 onChange={e => updateItem(index, 'cor', e.target.value)}
+                required
               >
                 <option value="">Cor</option>
                 {cores.map((c, i) => (
@@ -488,6 +391,7 @@ useEffect(() => {
                 placeholder="Qtd"
                 value={item.quantidade}
                 onChange={e => updateItem(index, 'quantidade', e.target.value)} 
+                required
               />
               
               <input 
@@ -496,6 +400,7 @@ useEffect(() => {
                 placeholder="Peso"
                 value={item.peso}
                 onChange={e => updateItem(index, 'peso', e.target.value)} 
+                required
               />
 
               <input 
@@ -507,7 +412,7 @@ useEffect(() => {
             </div>
           ))}
 
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+          <div style={{ marginTop: '1.5rem' }}>
             <button 
               type="button" 
               onClick={addItem} 
