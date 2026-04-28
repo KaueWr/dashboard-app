@@ -6,8 +6,13 @@ function CadastroPedido({ clientKey, onSuccess }) {
   const [produtos, setProdutos] = useState([]);
   const [cores, setCores] = useState([]);
   const [clientes, setClientes] = useState([]);
+  const [step, setStep] = useState(1);
 
   const [success, setSuccess] = useState(false);
+
+  const [itens, setItens] = useState([
+  { artigo: '', cor: '', quantidade: '', peso: '', valor: '' }
+]);
 
   const [form, setForm] = useState({
   cliente: '',
@@ -52,6 +57,23 @@ function CadastroPedido({ clientKey, onSuccess }) {
     artigo: artigoSelecionado,
     valor: preco
   });
+};
+const addItem = () => {
+  setItens([...itens, { artigo: '', cor: '', quantidade: '', peso: '', valor: '' }]);
+};
+
+const updateItem = (index, field, value) => {
+  const novosItens = [...itens];
+  novosItens[index][field] = value;
+
+  if (field === 'artigo') {
+    const produto = produtos.find(p => p.artigo === value);
+    if (produto && form.comissao) {
+      novosItens[index].valor = produto.precos?.[form.comissao] || '';
+    }
+  }
+
+  setItens(novosItens);
 };
 
 useEffect(() => {
@@ -210,7 +232,8 @@ useEffect(() => {
       )}
 
       <form onSubmit={handleSubmit} style={styles.formGrid}>
-        
+       {step === 1 && (
+        <>
         {/* CLIENTE */}
         <div style={styles.group}>
           <label style={styles.label}>Cliente</label>
@@ -357,12 +380,76 @@ useEffect(() => {
 
         {/* BOTÃO */}
         <div style={styles.fullWidth}>
-          <button type="submit" style={styles.button}>
-            Confirmar e Cadastrar Pedido
+          <button type="button" onClick={() => setStep(2)} style={styles.button}>
+          Próximo →
           </button>
         </div>
-
+</>
+)}
       </form>
+      {step === 2 && (
+  <div style={{ padding: '20px' }}>
+
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
+      gap: '10px',
+      fontWeight: '700',
+      marginBottom: '10px'
+    }}>
+      <div>Artigo</div>
+      <div>Cor</div>
+      <div>Qtd</div>
+      <div>Peso</div>
+      <div>Valor</div>
+    </div>
+
+    {itens.map((item, index) => (
+      <div key={index} style={{
+        display: 'grid',
+        gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
+        gap: '10px',
+        marginBottom: '10px'
+      }}>
+
+        <select
+          value={item.artigo}
+          onChange={e => updateItem(index, 'artigo', e.target.value)}
+        >
+          <option>Artigo</option>
+          {produtos.map(p => (
+            <option key={p.id} value={p.artigo}>{p.artigo}</option>
+          ))}
+        </select>
+
+        <select
+          value={item.cor}
+          onChange={e => updateItem(index, 'cor', e.target.value)}
+        >
+          <option>Cor</option>
+          {cores.map((c,i) => (
+            <option key={i}>{c}</option>
+          ))}
+        </select>
+
+        <input type="number" onChange={e => updateItem(index, 'quantidade', e.target.value)} />
+        <input type="number" onChange={e => updateItem(index, 'peso', e.target.value)} />
+
+        <input value={item.valor ? `R$ ${item.valor}` : ''} readOnly />
+
+      </div>
+    ))}
+
+    <button type="button" onClick={addItem} style={styles.button}>
+      + Adicionar Linha
+    </button>
+
+    <button onClick={handleSubmit} style={styles.button}>
+      Finalizar Pedido
+    </button>
+
+  </div>
+)}
     </div>
     
   );
