@@ -54,14 +54,6 @@ function CadastroPedido({ clientKey, onSuccess }) {
   });
 };
 
-}; ([form.comissao, form.artigo]); // 🔥 ADICIONAR form.artigo
-
-  setForm({
-    ...form,
-    artigo: artigoSelecionado,
-    valor: preco
-  });
-
 useEffect(() => {
   if (!form.artigo || !form.comissao) return;
 
@@ -375,5 +367,5 @@ useEffect(() => {
     
   );
 
-
+}
 export default CadastroPedido;
