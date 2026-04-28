@@ -22,16 +22,20 @@ function CadastroPedido({ clientKey, onSuccess }) {
   });
 
   useEffect(() => {
-    fetch('/api/data', {
-      headers: { 'x-api-key': clientKey }
-    })
-      .then(res => res.json())
-      .then(data => {
-        setProdutos(data.produtos || []);
-        setCores(data.cores || []);
-        setClientes(data.clientes || []);
-      });
-  }, [clientKey]);
+  fetch('/api/data', {
+    headers: { 'x-api-key': clientKey }
+  })
+    .then(res => res.json())
+    .then(data => {
+
+      console.log("DADOS API:", data); // 👈 ADICIONA ISSO
+
+      setProdutos(data.produtos || []);
+      setCores(data.cores || []);
+      setClientes(data.clientes || []);
+
+    });
+}, [clientKey]);
 
   const handleArtigoChange = (artigoSelecionado) => {
     const item = produtos.find(p => p.artigo === artigoSelecionado);
