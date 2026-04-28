@@ -95,16 +95,11 @@ useEffect(() => {
 
     const payload = {
   tipo: "pedido",
-  "CLIENTE": form.cliente,
-  "REPRESENTANTE": form.representante,
-  "PRODUTO": form.artigo,
-  "COR": form.cor,
-  "QUANTIDADE": form.quantidade,
-  "VALOR": form.valor,
-  "COMISSAO": form.comissao, // 🔥 AQUI
-  "STATUS": form.status,
-  "DATA PEDIDO": form.data,
-  "OBSERVAÇÃO": form.observacao
+  cliente: form.cliente,
+  representante: form.representante,
+  comissao: form.comissao,
+  data: form.data,
+  itens: itens
 };
 
     await fetch('/api/data', {
@@ -211,11 +206,74 @@ useEffect(() => {
       fontWeight: '700',
       cursor: 'pointer',
       transition: 'all 0.3s',
-      marginTop: '2rem',
+      marginTop: '1rem',
       boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.2)'
+    },
+    buttonSecondary: {
+      width: 'auto',
+      padding: '0.8rem 1.5rem',
+      backgroundColor: '#f3f4f6',
+      color: '#374151',
+      border: '1px solid #d1d5db',
+      borderRadius: '10px',
+      fontSize: '0.95rem',
+      fontWeight: '600',
+      cursor: 'pointer',
+      transition: 'all 0.2s',
+      marginBottom: '1rem'
+    },
+    buttonAction: {
+      width: '100%',
+      padding: '1rem',
+      backgroundColor: '#10b981',
+      color: 'white',
+      border: 'none',
+      borderRadius: '12px',
+      fontSize: '1.1rem',
+      fontWeight: '700',
+      cursor: 'pointer',
+      transition: 'all 0.3s',
+      marginTop: '1rem',
+      boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)'
+    },
+    buttonOutline: {
+      width: 'auto',
+      padding: '0.6rem 1rem',
+      backgroundColor: 'transparent',
+      color: '#2563eb',
+      border: '2px solid #2563eb',
+      borderRadius: '10px',
+      fontSize: '0.9rem',
+      fontWeight: '700',
+      cursor: 'pointer',
+      transition: 'all 0.2s',
+      marginBottom: '1rem'
     },
     row: {
       display: 'contents' // Mantém o grid pai controlando
+    },
+    gridHeader: {
+      display: 'grid',
+      gridTemplateColumns: '2fr 1fr 1fr 1fr 1.2fr',
+      gap: '10px',
+      fontWeight: '700',
+      marginBottom: '10px',
+      color: '#4b5563',
+      fontSize: '0.85rem',
+      textTransform: 'uppercase',
+      letterSpacing: '0.025em',
+      padding: '0 10px'
+    },
+    gridRow: {
+      display: 'grid',
+      gridTemplateColumns: '2fr 1fr 1fr 1fr 1.2fr',
+      gap: '10px',
+      marginBottom: '10px',
+      alignItems: 'center',
+      backgroundColor: '#f9fafb',
+      padding: '10px',
+      borderRadius: '10px',
+      border: '1px solid #f0f0f0'
     }
   };
 
@@ -231,228 +289,244 @@ useEffect(() => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} style={styles.formGrid}>
-       {step === 1 && (
-        <>
-        {/* CLIENTE */}
-        <div style={styles.group}>
-          <label style={styles.label}>Cliente</label>
-          <select 
-            style={styles.input}
-            value={form.cliente}
-            onChange={e => setForm({...form, cliente: e.target.value})}
-            required
+      {step === 1 && (
+        <form onSubmit={(e) => { e.preventDefault(); setStep(2); }} style={styles.formGrid}>
+          {/* CLIENTE */}
+          <div style={styles.group}>
+            <label style={styles.label}>Cliente</label>
+            <select 
+              style={styles.input}
+              value={form.cliente}
+              onChange={e => setForm({...form, cliente: e.target.value})}
+              required
+            >
+              <option value="">Selecione o Cliente</option>
+              {clientes.map((c) => (
+                <option key={c.id} value={c.nome}>{c.nome}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* REPRESENTANTE */}
+          <div style={styles.group}>
+            <label style={styles.label}>Representante</label>
+            <input 
+              style={styles.input}
+              placeholder="Nome do Representante"
+              value={form.representante}
+              onChange={e => setForm({...form, representante: e.target.value})}
+              required
+            />
+          </div>
+
+          {/* ARTIGO */}
+          <div style={styles.group}>
+            <label style={styles.label}>Artigo</label>
+            <select 
+              style={styles.input}
+              value={form.artigo}
+              onChange={(e) => handleArtigoChange(e.target.value)}
+              required
+            >
+              <option value="">Selecione o Artigo</option>
+              {produtos.map((item) => (
+                <option key={item.id} value={item.artigo}>{item.artigo}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* COR */}
+          <div style={styles.group}>
+            <label style={styles.label}>Cor</label>
+            <select 
+              style={styles.input}
+              value={form.cor}
+              onChange={e => setForm({...form, cor: e.target.value})}
+              required
+            >
+              <option value="">Selecione a Cor</option>
+              {cores.map((c, index) => (
+                <option key={index} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* COMISSÃO */}
+          <div style={styles.group}>
+            <label style={styles.label}>Comissão</label>
+            <select
+              style={styles.input}
+              value={form.comissao}
+              onChange={e => setForm({...form, comissao: e.target.value})}
+              required
+            >
+              <option value="">Selecione a Comissão</option>
+              {[2,3,4,5,6,7,8,9].map(val => (
+                <option key={val} value={val}>{val}%</option>
+              ))}
+            </select>
+          </div>
+
+          {/* QUANTIDADE */}
+          <div style={styles.group}>
+            <label style={styles.label}>Quantidade Total</label>
+            <input 
+              style={styles.input}
+              type="number"
+              placeholder="0.00"
+              value={form.quantidade}
+              onChange={e => setForm({...form, quantidade: e.target.value})}
+              required
+            />
+          </div>
+
+          {/* VALOR UNITÁRIO */}
+          <div style={styles.group}>
+            <label style={styles.label}>Valor Unitário Estimado</label>
+            <input 
+              style={{...styles.input, backgroundColor: '#f3f4f6', cursor: 'not-allowed'}}
+              value={form.valor ? `R$ ${form.valor}` : ''}
+              readOnly
+              placeholder="Valor automático"
+            />
+          </div>
+
+          {/* STATUS */}
+          <div style={styles.group}>
+            <label style={styles.label}>Status</label>
+            <select 
+              style={styles.input}
+              value={form.status}
+              onChange={e => setForm({...form, status: e.target.value})}
+              required
+            >
+              <option value="">Selecione o Status</option>
+              <option value="Pendente">Pendente</option>
+              <option value="Em Produção">Em Produção</option>
+              <option value="Finalizado">Finalizado</option>
+              <option value="Cancelado">Cancelado</option>
+            </select>
+          </div>
+
+          {/* DATA DO PEDIDO */}
+          <div style={styles.group}>
+            <label style={styles.label}>Data do Pedido</label>
+            <input 
+              type="date" 
+              style={styles.input}
+              value={form.data}
+              onChange={e => setForm({...form, data: e.target.value})}
+              required
+            />
+          </div>
+
+          {/* OBSERVAÇÃO */}
+          <div style={{...styles.group, ...styles.fullWidth}}>
+            <label style={styles.label}>Observações</label>
+            <textarea 
+              style={styles.textarea}
+              placeholder="Detalhes adicionais do pedido..."
+              value={form.observacao}
+              onChange={e => setForm({...form, observacao: e.target.value})}
+            />
+          </div>
+
+          {/* BOTÃO PRÓXIMO */}
+          <div style={styles.fullWidth}>
+            <button type="submit" style={styles.button}>
+              Próximo Passo: Adicionar Itens →
+            </button>
+          </div>
+        </form>
+      )}
+
+      {step === 2 && (
+        <div style={{ animation: 'fadeIn 0.3s ease-in' }}>
+          <button 
+            type="button" 
+            onClick={() => setStep(1)} 
+            style={styles.buttonSecondary}
           >
-            <option value="">Selecione o Cliente</option>
-            {clientes.map((c) => (
-              <option key={c.id} value={c.nome}>{c.nome}</option>
-            ))}
-          </select>
-        </div>
+            ← Voltar para Informações Gerais
+          </button>
 
-        {/* REPRESENTANTE */}
-        <div style={styles.group}>
-          <label style={styles.label}>Representante</label>
-          <input 
-            style={styles.input}
-            placeholder="Nome do Representante"
-            value={form.representante}
-            onChange={e => setForm({...form, representante: e.target.value})}
-            required
-          />
-        </div>
+          <div style={styles.gridHeader}>
+            <div>Artigo</div>
+            <div>Cor</div>
+            <div>Qtd</div>
+            <div>Peso</div>
+            <div>Valor</div>
+          </div>
 
-        {/* ARTIGO */}
-        <div style={styles.group}>
-          <label style={styles.label}>Artigo</label>
-          <select 
-            style={styles.input}
-            value={form.artigo}
-            onChange={(e) => handleArtigoChange(e.target.value)}
-            required
+          {itens.map((item, index) => (
+            <div key={index} style={styles.gridRow}>
+              <select
+                style={{...styles.input, padding: '0.5rem'}}
+                value={item.artigo}
+                onChange={e => updateItem(index, 'artigo', e.target.value)}
+              >
+                <option value="">Artigo</option>
+                {produtos.map(p => (
+                  <option key={p.id} value={p.artigo}>{p.artigo}</option>
+                ))}
+              </select>
+
+              <select
+                style={{...styles.input, padding: '0.5rem'}}
+                value={item.cor}
+                onChange={e => updateItem(index, 'cor', e.target.value)}
+              >
+                <option value="">Cor</option>
+                {cores.map((c, i) => (
+                  <option key={i} value={c}>{c}</option>
+                ))}
+              </select>
+
+              <input 
+                style={{...styles.input, padding: '0.5rem'}}
+                type="number" 
+                placeholder="Qtd"
+                value={item.quantidade}
+                onChange={e => updateItem(index, 'quantidade', e.target.value)} 
+              />
+              
+              <input 
+                style={{...styles.input, padding: '0.5rem'}}
+                type="number" 
+                placeholder="Peso"
+                value={item.peso}
+                onChange={e => updateItem(index, 'peso', e.target.value)} 
+              />
+
+              <input 
+                style={{...styles.input, padding: '0.5rem', backgroundColor: '#f3f4f6', cursor: 'not-allowed'}}
+                value={item.valor ? `R$ ${item.valor}` : ''} 
+                readOnly 
+                placeholder="R$"
+              />
+            </div>
+          ))}
+
+          <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+            <button 
+              type="button" 
+              onClick={addItem} 
+              style={styles.buttonOutline}
+            >
+              + Adicionar Nova Linha
+            </button>
+          </div>
+
+          <button 
+            onClick={handleSubmit} 
+            style={styles.buttonAction}
           >
-            <option value="">Selecione o Artigo</option>
-            {produtos.map((item) => (
-              <option key={item.id} value={item.artigo}>{item.artigo}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* COR */}
-        <div style={styles.group}>
-          <label style={styles.label}>Cor</label>
-          <select 
-            style={styles.input}
-            value={form.cor}
-            onChange={e => setForm({...form, cor: e.target.value})}
-            required
-          >
-            <option value="">Selecione a Cor</option>
-            {cores.map((c, index) => (
-              <option key={index} value={c}>{c}</option>
-            ))}
-          </select>
-        </div>
-        {/* 🔥 COMISSÃO */}
-<div style={styles.group}>
-  <label style={styles.label}>Comissão</label>
-  <select
-    style={styles.input}
-    value={form.comissao}
-    onChange={e => setForm({...form, comissao: e.target.value})}
-    required
-  >
-    <option value="">Selecione a Comissão</option>
-    <option value="2">2%</option>
-    <option value="3">3%</option>
-    <option value="4">4%</option>
-    <option value="5">5%</option>
-    <option value="6">6%</option>
-    <option value="7">7%</option>
-    <option value="8">8%</option>
-    <option value="9">9%</option>
-  </select>
-</div>
-
-        {/* QUANTIDADE */}
-        <div style={styles.group}>
-          <label style={styles.label}>Quantidade</label>
-          <input 
-            style={styles.input}
-            type="number"
-            placeholder="0.00"
-            value={form.quantidade}
-            onChange={e => setForm({...form, quantidade: e.target.value})}
-            required
-          />
-        </div>
-
-        {/* VALOR (READ ONLY) */}
-        <div style={styles.group}>
-          <label style={styles.label}>Valor Unitário</label>
-          <input 
-            style={{...styles.input, backgroundColor: '#f3f4f6', cursor: 'not-allowed'}}
-            value={form.valor ? `R$ ${form.valor}` : ''}
-            readOnly
-            placeholder="Valor automático"
-          />
-        </div>
-
-        {/* STATUS */}
-        <div style={styles.group}>
-          <label style={styles.label}>Status</label>
-          <select 
-            style={styles.input}
-            value={form.status}
-            onChange={e => setForm({...form, status: e.target.value})}
-            required
-          >
-            <option value="">Selecione o Status</option>
-            <option value="Pendente">Pendente</option>
-            <option value="Em Produção">Em Produção</option>
-            <option value="Finalizado">Finalizado</option>
-            <option value="Cancelado">Cancelado</option>
-          </select>
-        </div>
-
-        {/* DATA DO PEDIDO */}
-        <div style={styles.group}>
-          <label style={styles.label}>Data do Pedido</label>
-          <input 
-            type="date" 
-            style={styles.input}
-            value={form.data}
-            onChange={e => setForm({...form, data: e.target.value})}
-            required
-          />
-        </div>
-
-        {/* OBSERVAÇÃO */}
-        <div style={{...styles.group, ...styles.fullWidth}}>
-          <label style={styles.label}>Observações</label>
-          <textarea 
-            style={styles.textarea}
-            placeholder="Detalhes adicionais do pedido..."
-            value={form.observacao}
-            onChange={e => setForm({...form, observacao: e.target.value})}
-          />
-        </div>
-
-        {/* BOTÃO */}
-        <div style={styles.fullWidth}>
-          <button type="button" onClick={() => setStep(2)} style={styles.button}>
-          Próximo →
+            ✅ Finalizar e Enviar Pedido
           </button>
         </div>
-</>
-)}
-      </form>
-      {step === 2 && (
-  <div style={{ padding: '20px' }}>
-
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
-      gap: '10px',
-      fontWeight: '700',
-      marginBottom: '10px'
-    }}>
-      <div>Artigo</div>
-      <div>Cor</div>
-      <div>Qtd</div>
-      <div>Peso</div>
-      <div>Valor</div>
+      )}
     </div>
-
-    {itens.map((item, index) => (
-      <div key={index} style={{
-        display: 'grid',
-        gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
-        gap: '10px',
-        marginBottom: '10px'
-      }}>
-
-        <select
-          value={item.artigo}
-          onChange={e => updateItem(index, 'artigo', e.target.value)}
-        >
-          <option>Artigo</option>
-          {produtos.map(p => (
-            <option key={p.id} value={p.artigo}>{p.artigo}</option>
-          ))}
-        </select>
-
-        <select
-          value={item.cor}
-          onChange={e => updateItem(index, 'cor', e.target.value)}
-        >
-          <option>Cor</option>
-          {cores.map((c,i) => (
-            <option key={i}>{c}</option>
-          ))}
-        </select>
-
-        <input type="number" onChange={e => updateItem(index, 'quantidade', e.target.value)} />
-        <input type="number" onChange={e => updateItem(index, 'peso', e.target.value)} />
-
-        <input value={item.valor ? `R$ ${item.valor}` : ''} readOnly />
-
-      </div>
-    ))}
-
-    <button type="button" onClick={addItem} style={styles.button}>
-      + Adicionar Linha
-    </button>
-
-    <button onClick={handleSubmit} style={styles.button}>
-      Finalizar Pedido
-    </button>
-
-  </div>
-)}
-    </div>
-    
   );
-
 }
+
 export default CadastroPedido;
