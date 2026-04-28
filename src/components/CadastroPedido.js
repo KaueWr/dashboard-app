@@ -10,16 +10,17 @@ function CadastroPedido({ clientKey, onSuccess }) {
   const [success, setSuccess] = useState(false);
 
   const [form, setForm] = useState({
-    cliente: '',
-    representante: '',
-    artigo: '',
-    cor: '',
-    quantidade: '',
-    valor: '',
-    status: '',
-    data: '',
-    observacao: ''
-  });
+  cliente: '',
+  representante: '',
+  artigo: '',
+  cor: '',
+  quantidade: '',
+  valor: '',
+  status: '',
+  data: '',
+  observacao: '',
+  comissao: '' // 🔥 NOVO
+});
 
   useEffect(() => {
   fetch('/api/data', {
@@ -38,30 +39,60 @@ function CadastroPedido({ clientKey, onSuccess }) {
 }, [clientKey]);
 
   const handleArtigoChange = (artigoSelecionado) => {
-    const item = produtos.find(p => p.artigo === artigoSelecionado);
+  const produto = produtos.find(p => p.artigo === artigoSelecionado);
 
-    setForm({
-      ...form,
-      artigo: artigoSelecionado,
-      valor: item ? item.preco : ''
-    });
-  };
+  let preco = '';
+
+  useEffect(() => {
+  if (!form.artigo || !form.comissao) return;
+
+  const produto = produtos.find(p => p.artigo === form.artigo);
+
+  if (produto) {
+    setForm(prev => ({
+      ...prev,
+      valor: produto.precos?.[form.comissao] || ''
+    }));
+  }
+
+}, [form.comissao, form.artigo]); // 🔥 ADICIONAR form.artigo
+
+  setForm({
+    ...form,
+    artigo: artigoSelecionado,
+    valor: preco
+  });
+};
+useEffect(() => {
+  if (!form.artigo || !form.comissao) return;
+
+  const produto = produtos.find(p => p.artigo === form.artigo);
+
+  if (produto) {
+    setForm(prev => ({
+      ...prev,
+      valor: produto.precos?.[form.comissao] || ''
+    }));
+  }
+
+}, [form.comissao]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     const payload = {
-      tipo: "pedido",
-      "CLIENTE": form.cliente,
-      "REPRESENTANTE": form.representante,
-      "PRODUTO": form.artigo,
-      "COR": form.cor,
-      "QUANTIDADE": form.quantidade,
-      "VALOR": form.valor,
-      "STATUS": form.status,
-      "DATA PEDIDO": form.data,
-      "OBSERVAÇÃO": form.observacao
-    };
+  tipo: "pedido",
+  "CLIENTE": form.cliente,
+  "REPRESENTANTE": form.representante,
+  "PRODUTO": form.artigo,
+  "COR": form.cor,
+  "QUANTIDADE": form.quantidade,
+  "VALOR": form.valor,
+  "COMISSAO": form.comissao, // 🔥 AQUI
+  "STATUS": form.status,
+  "DATA PEDIDO": form.data,
+  "OBSERVAÇÃO": form.observacao
+};
 
     await fetch('/api/data', {
       method: 'POST',
@@ -248,6 +279,26 @@ function CadastroPedido({ clientKey, onSuccess }) {
             ))}
           </select>
         </div>
+        {/* 🔥 COMISSÃO */}
+<div style={styles.group}>
+  <label style={styles.label}>Comissão</label>
+  <select
+    style={styles.input}
+    value={form.comissao}
+    onChange={e => setForm({...form, comissao: e.target.value})}
+    required
+  >
+    <option value="">Selecione a Comissão</option>
+    <option value="2">2%</option>
+    <option value="3">3%</option>
+    <option value="4">4%</option>
+    <option value="5">5%</option>
+    <option value="6">6%</option>
+    <option value="7">7%</option>
+    <option value="8">8%</option>
+    <option value="9">9%</option>
+  </select>
+</div>
 
         {/* QUANTIDADE */}
         <div style={styles.group}>
@@ -322,7 +373,9 @@ function CadastroPedido({ clientKey, onSuccess }) {
 
       </form>
     </div>
+    
   );
+
 }
 
 export default CadastroPedido;
