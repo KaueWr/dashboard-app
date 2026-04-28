@@ -38,24 +38,14 @@ function CadastroPedido({ clientKey, onSuccess }) {
     });
 }, [clientKey]);
 
-  const handleArtigoChange = (artigoSelecionado) => {
+ const handleArtigoChange = (artigoSelecionado) => {
   const produto = produtos.find(p => p.artigo === artigoSelecionado);
 
   let preco = '';
 
-  useEffect(() => {
-  if (!form.artigo || !form.comissao) return;
-
-  const produto = produtos.find(p => p.artigo === form.artigo);
-
-  if (produto) {
-    setForm(prev => ({
-      ...prev,
-      valor: produto.precos?.[form.comissao] || ''
-    }));
+  if (produto && form.comissao) {
+    preco = produto.precos?.[form.comissao] || '';
   }
-
-}, [form.comissao, form.artigo]); // 🔥 ADICIONAR form.artigo
 
   setForm({
     ...form,
@@ -63,6 +53,15 @@ function CadastroPedido({ clientKey, onSuccess }) {
     valor: preco
   });
 };
+
+}; ([form.comissao, form.artigo]); // 🔥 ADICIONAR form.artigo
+
+  setForm({
+    ...form,
+    artigo: artigoSelecionado,
+    valor: preco
+  });
+
 useEffect(() => {
   if (!form.artigo || !form.comissao) return;
 
@@ -75,7 +74,7 @@ useEffect(() => {
     }));
   }
 
-}, [form.comissao]);
+}, [form.comissao, form.artigo]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -376,6 +375,5 @@ useEffect(() => {
     
   );
 
-}
 
 export default CadastroPedido;
