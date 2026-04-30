@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { apiJson } from '../services/apiClient';
 
-function CadastroTemp({ clientKey, onSuccess, colors }) {
+function CadastroTemp({ onSuccess, colors }) {
   const [formArtigo, setFormArtigo] = useState({
     nomeProduto: '',
     malharia: '',
@@ -51,20 +52,13 @@ function CadastroTemp({ clientKey, onSuccess, colors }) {
         "DATA DE CADASTRO": now.toLocaleDateString('pt-BR')
       };
 
-      const response = await fetch('/api/data', {
+      await apiJson('/api/data', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': clientKey
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)
       });
-
-      const result = await response.json();
-
-      if (result.error) {
-        throw new Error(result.error);
-      }
 
       // ✅ sucesso real
       setMessage({ type: 'success', text: 'Artigo cadastrado com sucesso!' });

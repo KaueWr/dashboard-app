@@ -135,6 +135,13 @@ function Header({ activeTab, setActiveTab, syncData, loading, lastSync }) {
           Pedidos
         </button>
 
+        <button
+          onClick={() => setActiveTab('seguranca')}
+          style={{...styles.tab, ...(activeTab === 'seguranca' ? styles.tabActive : {})}}
+        >
+          SeguranÃ§a
+        </button>
+
       </div>
     </header>
   );

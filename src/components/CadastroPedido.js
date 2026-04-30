@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { apiJson } from '../services/apiClient';
 
-function CadastroPedido({ clientKey, onSuccess }) {
+function CadastroPedido({ onSuccess }) {
 
   // 🔥 LÓGICA MANTIDA INTEGRALMENTE
   const [produtos, setProdutos] = useState([]);
@@ -8,7 +9,8 @@ function CadastroPedido({ clientKey, onSuccess }) {
   const [clientes, setClientes] = useState([]);
   const [step, setStep] = useState(1);
 
-  const [success, setSuccess] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
+  const [submitting, setSubmitting] = useState(false);
 
   const [itens, setItens] = useState([
     { artigo: '', cor: '', quantidade: '', peso: '', valor: '' }
@@ -24,20 +26,33 @@ function CadastroPedido({ clientKey, onSuccess }) {
   });
 
   useEffect(() => {
-    fetch('/api/data', {
-      headers: { 'x-api-key': clientKey }
-    })
-      .then(res => res.json())
-      .then(data => {
-        console.log("DADOS API:", data);
-        setProdutos(data.produtos || []);
-        setCores(data.cores || []);
-        setClientes(data.clientes || []);
-      });
-  }, [clientKey]);
+    let active = true;
+
+    async function loadOptions() {
+      try {
+        const data = await apiJson('/api/data');
+
+        if (active) {
+          setProdutos(data.produtos || []);
+          setCores(data.cores || []);
+          setClientes(data.clientes || []);
+        }
+      } catch (err) {
+        if (active) {
+          setMessage({ type: 'error', text: err.message });
+        }
+      }
+    }
+
+    loadOptions();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const addItem = () => {
-    setItens([...itens, { artigo: '', cor: '', quantidade: '', peso: '', valor: '' }]);
+    setItens(currentItems => [...currentItems, { artigo: '', cor: '', quantidade: '', peso: '', valor: '' }]);
   };
 
   const updateItem = (index, field, value) => {
@@ -57,18 +72,19 @@ function CadastroPedido({ clientKey, onSuccess }) {
   // Atualiza preços de todos os itens se a comissão mudar
   useEffect(() => {
     if (!form.comissao) return;
-    const novosItens = itens.map(item => {
+    setItens(currentItems => currentItems.map(item => {
       const produto = produtos.find(p => p.artigo === item.artigo);
       if (produto) {
         return { ...item, valor: produto.precos?.[form.comissao] || '' };
       }
       return item;
-    });
-    setItens(novosItens);
-  }, [form.comissao]);
+    }));
+  }, [form.comissao, produtos]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitting(true);
+    setMessage({ type: '', text: '' });
 
     const payload = {
       tipo: "pedido",
@@ -81,18 +97,25 @@ function CadastroPedido({ clientKey, onSuccess }) {
       itens: itens
     };
 
-    await fetch('/api/data', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': clientKey
-      },
-      body: JSON.stringify(payload)
-    });
+    try {
+      await apiJson('/api/data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
 
-    setSuccess(true);
-    setTimeout(() => setSuccess(false), 3000);
-    onSuccess();
+      setMessage({ type: 'success', text: 'Pedido cadastrado com sucesso!' });
+      setTimeout(() => setMessage(currentMessage => (
+        currentMessage.type === 'success' ? { type: '', text: '' } : currentMessage
+      )), 3000);
+      onSuccess();
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const styles = {
@@ -127,6 +150,16 @@ function CadastroPedido({ clientKey, onSuccess }) {
       textAlign: 'center',
       fontWeight: '600',
       border: '1px solid #bbf7d0'
+    },
+    error: {
+      backgroundColor: '#fee2e2',
+      color: '#991b1b',
+      padding: '1rem',
+      borderRadius: '12px',
+      marginBottom: '2rem',
+      textAlign: 'center',
+      fontWeight: '600',
+      border: '1px solid #fecaca'
     },
     formGrid: {
       display: 'grid',
@@ -247,9 +280,9 @@ function CadastroPedido({ clientKey, onSuccess }) {
         <span>📦</span> Cadastro de Pedido
       </div>
 
-      {success && (
-        <div style={styles.success}>
-          ✅ Pedido cadastrado com sucesso!
+      {message.text && (
+        <div style={message.type === 'success' ? styles.success : styles.error}>
+          {message.text}
         </div>
       )}
 
@@ -424,9 +457,10 @@ function CadastroPedido({ clientKey, onSuccess }) {
 
           <button 
             onClick={handleSubmit} 
+            disabled={submitting}
             style={styles.buttonAction}
           >
-            ✅ Finalizar e Enviar Pedido
+            {submitting ? 'Enviando...' : '✅ Finalizar e Enviar Pedido'}
           </button>
         </div>
       )}
