@@ -262,14 +262,12 @@ export default async function handler(req, res) {
     const protectedScriptUrl = getScriptUrlWithSecret(scriptUrl, appsScriptSecret);
 
     if (req.method === 'GET') {
-      const response = await fetch(protectedScriptUrl);
-      const data = await readJsonResponse(response);
-
-      if (!response.ok) {
-        return res.status(response.status).json({
-          error: data.error || 'Erro ao buscar dados no Apps Script.'
-        });
-      }
+    const response = await fetch(process.env.APPS_SCRIPT_URL, {
+     method: 'GET',
+      headers: {
+      'x-api-key': process.env.APPS_SCRIPT_SECRET
+     }
+      });
 
       return res.status(200).json(data);
     }
@@ -282,13 +280,14 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: validation.error });
       }
 
-      const response = await fetch(protectedScriptUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(validation.payload)
-      });
+      const response = await fetch(process.env.APPS_SCRIPT_URL, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': process.env.APPS_SCRIPT_SECRET
+  },
+  body: JSON.stringify(body)
+});
 
       const data = await readJsonResponse(response);
 
