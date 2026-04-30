@@ -259,17 +259,18 @@ export default async function handler(req, res) {
   }
 
   try {
-    const protectedScriptUrl = getScriptUrlWithSecret(scriptUrl, appsScriptSecret);
+    const response = await fetch(protectedScriptUrl);
 
     if (req.method === 'GET') {
     const response = await fetch(process.env.APPS_SCRIPT_URL, {
      method: 'GET',
       headers: {
-      'x-api-key': process.env.APPS_SCRIPT_SECRET
+      
      }
       });
 
-      return res.status(200).json(data);
+      const data = await readJsonResponse(response);
+return res.status(200).json(data);
     }
 
     if (req.method === 'POST') {
@@ -280,11 +281,11 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: validation.error });
       }
 
-      const response = await fetch(process.env.APPS_SCRIPT_URL, {
+      const response = await fetch(protectedScriptUrl, {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    'x-api-key': process.env.APPS_SCRIPT_SECRET
+    
   },
   body: JSON.stringify(body)
 });
